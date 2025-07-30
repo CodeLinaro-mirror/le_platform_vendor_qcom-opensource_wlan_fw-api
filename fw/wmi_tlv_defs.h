@@ -1484,7 +1484,10 @@ typedef enum {
     WMITLV_TAG_STRUC_wmi_hw_blacklist_chan_fixed_param,
     WMITLV_TAG_STRUC_wmi_hw_blacklist_chan_data,
     WMITLV_TAG_STRUC_wmi_pdev_suspend_event_fixed_param,
-    WMITLV_TAG_STRUC_wmi_bpf_set_apf_mode_cmd_fixed_param
+    WMITLV_TAG_STRUC_wmi_bpf_set_apf_mode_cmd_fixed_param,
+    WMITLV_TAG_STRUC_wmi_peer_assoc_operating_mode_params,
+    WMITLV_TAG_STRUC_wmi_recv_bcn_stats,
+    WMITLV_TAG_STRUC_wmi_vdev_vbss_peer_dyn_info,
 } WMITLV_TAG_ID;
 /*
  * IMPORTANT: Please add _ALL_ WMI Commands Here.
@@ -2882,7 +2885,8 @@ WMITLV_CREATE_PARAM_STRUC(WMI_VDEV_IPSEC_NATKEEPALIVE_FILTER_CMDID);
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_peer_assoc_mlo_params, mlo_params, WMITLV_SIZE_VAR) \
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_eht_rate_set, peer_eht_rates, WMITLV_SIZE_VAR) \
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_peer_assoc_mlo_partner_link_params, partner_link_params, WMITLV_SIZE_VAR) \
-    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_peer_assoc_tid_to_link_map, peer_tid_to_link_map, WMITLV_SIZE_VAR)
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_peer_assoc_tid_to_link_map, peer_tid_to_link_map, WMITLV_SIZE_VAR) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_peer_assoc_operating_mode_params, operating_mode_params, WMITLV_SIZE_VAR)
 
 WMITLV_CREATE_PARAM_STRUC(WMI_PEER_ASSOC_CMDID);
 
@@ -3658,7 +3662,8 @@ WMITLV_CREATE_PARAM_STRUC(WMI_VDEV_UPDATE_MAC_ADDR_CMDID);
 #define WMITLV_TABLE_WMI_VDEV_VBSS_CONFIG_CMDID(id,op,buf,len) \
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_vdev_vbss_config_cmd_fixed_param, wmi_vdev_vbss_config_cmd_fixed_param, fixed_param, WMITLV_SIZE_FIX)\
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_vdev_vbss_peer_pn_info, vbss_peer_pn_info, WMITLV_SIZE_VAR) \
-    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_vdev_vbss_peer_sn_info, vbss_peer_sn_info, WMITLV_SIZE_VAR)
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_vdev_vbss_peer_sn_info, vbss_peer_sn_info, WMITLV_SIZE_VAR) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_vdev_vbss_peer_dyn_info, wmi_vdev_vbss_peer_dyn_info, vbss_peer_dyn_info, WMITLV_SIZE_VAR)
 WMITLV_CREATE_PARAM_STRUC(WMI_VDEV_VBSS_CONFIG_CMDID);
 
 /* Pdev suspend Cmd */
@@ -6399,7 +6404,8 @@ WMITLV_CREATE_PARAM_STRUC(WMI_HOST_SWFDA_EVENTID);
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_pmf_bcn_protect_stats, pmf_bcn_protect_stats, WMITLV_SIZE_VAR) \
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_vdev_extd_stats, vdev_extd_stats, WMITLV_SIZE_VAR) \
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_pdev_extd_stats, pdev_extd_stats, WMITLV_SIZE_VAR) \
-    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_pdev_telemetry_stats, pdev_telemetry_stats, WMITLV_SIZE_VAR)
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_pdev_telemetry_stats, pdev_telemetry_stats, WMITLV_SIZE_VAR) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_recv_bcn_stats, recv_bcn_stats, WMITLV_SIZE_VAR)
 WMITLV_CREATE_PARAM_STRUC(WMI_UPDATE_STATS_EVENTID);
 
 /* Update PN response Event */
@@ -7825,7 +7831,8 @@ WMITLV_CREATE_PARAM_STRUC(WMI_VENDOR_PEER_EVENTID);
 #define WMITLV_TABLE_WMI_VDEV_VBSS_CONFIG_EVENTID(id,op,buf,len) \
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_vdev_vbss_config_event_fixed_param, wmi_vdev_vbss_config_event_fixed_param, fixed_param, WMITLV_SIZE_FIX)\
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_vdev_vbss_peer_pn_info, vbss_peer_pn_info, WMITLV_SIZE_VAR) \
-    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_vdev_vbss_peer_sn_info, vbss_peer_sn_info, WMITLV_SIZE_VAR)
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_vdev_vbss_peer_sn_info, vbss_peer_sn_info, WMITLV_SIZE_VAR) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_vdev_vbss_peer_dyn_info, wmi_vdev_vbss_peer_dyn_info, vbss_peer_dyn_info, WMITLV_SIZE_VAR)
 WMITLV_CREATE_PARAM_STRUC(WMI_VDEV_VBSS_CONFIG_EVENTID);
 
 /* link switch event */

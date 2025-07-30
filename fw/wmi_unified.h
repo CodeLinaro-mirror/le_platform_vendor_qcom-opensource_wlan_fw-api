@@ -4870,8 +4870,13 @@ typedef struct {
      *      11 -> reserved
      *      Refer to the below WMI_RSRC_CFG_FLAGS2_OPTIMIZE_POWER_GET/SET
      *      macros.
+     *  Bit 25 - enable recv_bcn_stats feature
+     *      0 -> disable the feature
+     *      1 -> enable the feature
+     *     Refer to below WMI_RSRC_CFG_FLAGS2_RECV_BCN_STATS_ENABLED_GET/SET
+     *     macros.
      *
-     *  Bits 31:25 - Reserved
+     *  Bits 31:26 - Reserved
      */
     A_UINT32 flags2;
     /** @brief host_service_flags - can be used by Host to indicate
@@ -5457,6 +5462,11 @@ typedef struct {
     WMI_GET_BITS(flags2, 23, 2)
 #define WMI_RSRC_CFG_FLAGS2_OPTIMIZE_POWER_SET(flags2, value) \
     WMI_SET_BITS(flags2, 23, 2, value)
+
+#define WMI_RSRC_CFG_FLAGS2_RECV_BCN_STATS_ENABLED_GET(flags2) \
+    WMI_GET_BITS(flags2, 25, 1)
+#define WMI_RSRC_CFG_FLAGS2_RECV_BCN_STATS_ENABLED_SET(flags2, value) \
+    WMI_SET_BITS(flags2, 25, 1, value)
 
 
 #define WMI_RSRC_CFG_HOST_SERVICE_FLAG_NAN_IFACE_SUPPORT_GET(host_service_flags) \
@@ -10153,6 +10163,8 @@ typedef enum {
 #define WMI_PDEV_UPPER_CAP_DL_DIR_SET(_value, value) WMI_SET_BITS(_value, 18, 1, value)
 #define WMI_PDEV_UPPER_CAP_UL_DIR_GET(value) WMI_GET_BITS(value, 19, 1)
 #define WMI_PDEV_UPPER_CAP_UL_DIR_SET(_value, value) WMI_SET_BITS(_value, 19, 1, value)
+#define WMI_PDEV_UPPER_CAP_DIR_GET(value) WMI_GET_BITS(value, 18, 1)
+#define WMI_PDEV_UPPER_CAP_DIR_SET(_value, value) WMI_SET_BITS(_value, 18, 1, value)
 
 #define WMI_PDEV_RATE_DROP_NUM_MCS_GET(value) WMI_GET_BITS(value, 0, 8)
 #define WMI_PDEV_RATE_DROP_NUM_MCS_SET(_value, value) WMI_SET_BITS(_value, 0, 8, value)
@@ -11180,6 +11192,7 @@ typedef enum {
     WMI_REQUEST_VDEV_EXTD_STAT       = 0x10000,
     WMI_REQUEST_PDEV_EXTD_STAT       = 0x20000,
     WMI_REQUEST_PDEV_TELEMETRY_STAT  = 0x40000,
+    WMI_REQUEST_VDEV_RECV_BCN_STAT   = 0x80000,
 } wmi_stats_id;
 
 /*
@@ -11673,6 +11686,10 @@ typedef struct {
  *
  * This TLV is followed by another TLV of array of bytes
  *   num_channels * size of(struct wmi_channel_stats)
+ */
+/* If WMI_REQUEST_VDEV_RECV_BCN_STAT is set in stats_id, then TLV
+ * wmi_recv_bcn_stats wmi_recv_bcn_stats[]
+ * follows the other TLVs
  */
 } wmi_radio_link_stats_event_fixed_param;
 
@@ -15534,6 +15551,30 @@ typedef struct{
     A_UINT32 estimated_air_time_per_ac;
 } wmi_pdev_telemetry_stats;
 
+
+#define WMI_MAX_BCN_HISTORY 10 /* max beacon history entry */
+
+typedef struct {
+    /* Beacon real RSSI, non-averaged rssi, dBm units; -128 means invalid */
+    A_INT32 bcn_rssi;
+    /* Beacon tsf, 0 means invalid */
+    A_UINT32 bcn_tsf;
+    /* NOTE:
+     * Due to backwards-compatibility requirements, no new fields
+     * can be added to this struct.
+     */
+} wmi_bcn_his_info;
+
+typedef struct {
+    /* TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_recv_bcn_stats */
+    A_UINT32 tlv_header;
+    /* Vdev id */
+    A_UINT32 vdev_id;
+    /* Received History of last ten Beacon of the connected Bss */
+    wmi_bcn_his_info bcn_history[WMI_MAX_BCN_HISTORY];
+} wmi_recv_bcn_stats;
+
+
 /**
  *  VDEV statistics
  *  @todo
@@ -18241,6 +18282,8 @@ typedef struct {
     /* Target TSF value by which VDEV restart procedure should be completed in FW */
     A_UINT32 target_tsf_us_lo; /* bits 31:0 */
     A_UINT32 target_tsf_us_hi; /* bits 63:32 */
+    A_UINT32 vdev_op_ul_nss; /* vdev operating uplink nss. 1 ~ n: 1ss ~ nss */
+    A_UINT32 vdev_op_dl_nss; /* vdev operating downlink nss. 1 ~ n: 1ss ~ nss */
 
 /* The TLVs follows this structure:
  *     wmi_channel chan; <-- WMI channel
@@ -18440,6 +18483,7 @@ typedef enum {
     WMI_RATE_PREAMBLE_VHT,
     WMI_RATE_PREAMBLE_HE,
     WMI_RATE_PREAMBLE_EHT,
+    WMI_RATE_PREAMBLE_UHR,
 } WMI_RATE_PREAMBLE;
 
 /** Value to disable fixed rate setting */
@@ -22088,6 +22132,25 @@ typedef struct {
     wmi_mac_addr link_macaddr;
 } wmi_pdev_mesh_rx_filter_enable_fixed_param;
 
+typedef struct {
+    A_UINT32 tlv_header; /** TLV tag (WMITLV_TAG_STRUC_wmi_peer_assoc_operating_mode_params) and len */
+    /* rx_nss:
+     * self rx nss indicated to AP through capability IEs or operating mode IE.
+     * 1 ~ n: 1ss ~ nss
+     */
+    A_UINT32 rx_nss;
+    /* tx_nss:
+     * self tx nss indicated to AP through capability IEs or operating mode IE.
+     * 1 ~ n: 1ss ~ nss
+     */
+    A_UINT32 tx_nss;
+    /* bw:
+     * self BW indicated to AP through capability IEs or operating mode IE,
+     * refer to wmi_channel_width for definition of the values this field
+     * can hold.
+     */
+    A_UINT32 bw;
+} wmi_peer_assoc_operating_mode_params;
 
 /*
  * PEER assoc_flags for assoc complete:
@@ -22231,6 +22294,11 @@ typedef struct {
     A_UINT32 assoc_flags;
     /** maximum number of spatial streams supported by peer for tx */
     A_UINT32 peer_max_tx_nss;
+    /* max_downlink_nss:
+     * max downlink nss, intersected between self rx and peer tx.
+     * 1~N means 1ss~Nss
+     */
+    A_UINT32 max_downlink_nss;
 
 /* Following this struct are the TLV's:
  *     A_UINT8 peer_legacy_rates[];
@@ -22243,6 +22311,8 @@ typedef struct {
  *     wmi_eht_rate_set peer_eht_rates; <-- EHT capabilities of the peer
  *     wmi_peer_assoc_mlo_partner_link_params link_info[] <-- partner link info
  *     wmi_peer_assoc_tid_to_link_map[] <-- tid to link_map info
+ *     wmi_peer_assoc_operating_mode_params <-- operating mode param that
+ *         host sends to AP in peer assoc req, optional TLV
  */
 } wmi_peer_assoc_complete_cmd_fixed_param;
 
@@ -27507,13 +27577,32 @@ typedef struct {
 
 typedef struct {
     /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_tdls_peer_update_cmd_fixed_param  */
-    A_UINT32    tlv_header;
+    A_UINT32     tlv_header;
     /** unique id identifying the VDEV */
-    A_UINT32                    vdev_id;
+    A_UINT32     vdev_id;
     /** peer MAC address */
-    wmi_mac_addr                peer_macaddr;
+    wmi_mac_addr peer_macaddr;
     /** new TDLS state for peer (wmi_tdls_peer_state) */
-    A_UINT32                    peer_state;
+    A_UINT32     peer_state;
+    /** need_nss_conf:
+     * only set to 1 when this TDLS peer is required to operating
+     * in particular HW mode NSS
+     */
+    A_UINT32     need_nss_conf;
+    /* preferred_tx_nss:
+     * for peering state, it means advertised nss,
+     * for connected state, it means final negotiated nss.
+     * 1 ~ n: 1ss ~ nss
+     */
+    A_UINT32     preferred_tx_nss;
+    /* preferred_rx_nss:
+     * for peering state, it means advertised nss,
+     * for connected state, it means final negotiated nss.
+     * 1 ~ n: 1ss ~ nss
+     */
+    A_UINT32     preferred_rx_nss;
+
+
     /* The TLV for wmi_tdls_peer_capabilities will follow.
      *     wmi_tdls_peer_capabilities  peer_caps;
      */
@@ -27575,6 +27664,8 @@ enum wmi_tdls_peer_notification {
     WMI_TDLS_PEER_DISCONNECTED,
     /** TDLS/BT role change notification for connection tracker */
     WMI_TDLS_CONNECTION_TRACKER_NOTIFICATION,
+    /** resp to WMI_TDLS_PEER_UPDATE_CMDID as host requested */
+    WMI_TDLS_PEER_UPDATE_RESP,
 };
 
 enum wmi_tdls_peer_reason {
@@ -27604,6 +27695,8 @@ enum wmi_tdls_peer_reason {
     WMI_TDLS_SCAN_STARTED_EVENT,
     /** TDLS module received a scan complete event, TDLS connection tracker needs to handle this */
     WMI_TDLS_SCAN_COMPLETED_EVENT,
+    /** TDLS max supported operating NSS in current HW mode */
+    WMI_TDLS_OPERATING_NSS_CONF_EVENT,
 };
 
 /* WMI_TDLS_PEER_EVENTID */
@@ -27618,6 +27711,10 @@ typedef struct {
     A_UINT32        peer_reason;
     /** unique id identifying the VDEV */
     A_UINT32        vdev_id;
+    /** operating TX NSS 1 ~ n: 1ss ~ nss */
+    A_UINT32        tx_nss;
+    /** operating RX NSS 1 ~ n: 1ss ~ nss */
+    A_UINT32        rx_nss;
 } wmi_tdls_peer_event_fixed_param;
 
 /* NOTE: wmi_vdev_mcc_bcn_intvl_change_event_fixed_param would be deprecated. Please
@@ -40718,7 +40815,10 @@ typedef struct {
 #define WLM_FLAGS_ROAM_SUPPRESS  1
 #define WLM_FLAGS_ALLOW_FINAL_BMISS_ROAM 2
 
-/* bit 8: reserved for roaming */
+/* bit 8: Final bmiss roam will be triggered when all active links
+ *        are final bmiss reported.
+ */
+#define WLM_FLAGS_ROAM_WHEN_ALL_LINKS_FBMISS 1
 
 /* bit 9-11 of flags is used for powersave operation */
 /* bit 9: WLM_FLAGS_PS_DISABLE_BMPS, disable BMPS if bit is set */
@@ -40762,6 +40862,8 @@ typedef struct {
 #define WLM_FLAGS_TSF_LATENCY_COMPENSATE_ENABLED_SET(flag) WMI_SET_BITS(flag, 4, 1, val)
 #define WLM_FLAGS_ROAM_GET_POLICY(flag)                   WMI_GET_BITS(flag, 6, 2)
 #define WLM_FLAGS_ROAM_SET_POLICY(flag, val)              WMI_SET_BITS(flag, 6, 2, val)
+#define WLM_FLAGS_ROAM_GET_WHEN_ALL_LINKS_FBMISS(flag)    WMI_GET_BITS(flag, 8, 1)
+#define WLM_FLAGS_ROAM_SET_WHEN_ALL_LINKS_FBMISS(flag, val)  WMI_SET_BITS(flag, 8, 1, val)
 #define WLM_FLAGS_PS_IS_BMPS_DISABLED(flag)               WMI_GET_BITS(flag, 9, 1)
 #define WLM_FLAGS_PS_IS_CSS_CLPS_DISABLED(flag)           WMI_GET_BITS(flag, 10, 1)
 #define WLM_FLAGS_PS_SET_CSS_CLPS_DISABLE(flag, val)      WMI_SET_BITS(flag, 10, 1, val)
@@ -50920,8 +51022,9 @@ typedef struct {
     };
     /*
      * The below TLVs follow this TLV in the WMI_VDEV_VBSS_CONFIG_CMDID msg:
-     *   - wmi_vdev_vbss_peer_sn_info[];
      *   - wmi_vdev_vbss_peer_pn_info[];
+     *   - wmi_vdev_vbss_peer_sn_info[];
+     *   - wmi_vdev_vbss_peer_dyn_info;
      */
 } wmi_vdev_vbss_config_cmd_fixed_param;
 
@@ -50954,11 +51057,33 @@ typedef struct {
                 ssn: 16;
         };
     };
-    /* The below TLVs follow this TLV in the WMI_VDEV_VBSS_CONFIG_EVENTID msg:
-     *   - A_UINT32 scan_freq_list[];
-     *   - wmi_vdev_vbss_config_event_fixed_param[];
-     */
 } wmi_vdev_vbss_peer_sn_info;
+
+typedef struct {
+    A_UINT32 tlv_header; /* TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_vdev_vbss_peer_dyn_info */
+    union {
+        A_UINT32 peer_dyn_info1_word32;
+        struct {
+            /**  15:0  omi
+             *  31:16  eht_omi
+             */
+            A_UINT32
+                omi: 16,
+                eht_omi: 16;
+        };
+    };
+    union {
+        A_UINT32 peer_dyn_info2_word32;
+        struct {
+            /**  1:0 pm
+             *  31:2 reserved
+             */
+            A_UINT32
+                pm   : 1,
+                rsvd : 31;
+        };
+    };
+} wmi_vdev_vbss_peer_dyn_info;
 
 typedef enum {
     WMI_VBSS_GET_PEER_CONTEXT        = 1,
@@ -50977,6 +51102,15 @@ typedef enum {
 
 #define WMI_VDEV_VBSS_SN_INFO_GET_SSN(tid_num_ssn) WMI_GET_BITS(tid_num_ssn, 16, 16)
 #define WMI_VDEV_VBSS_SN_INFO_SET_SSN(action, value) WMI_SET_BITS(tid_num_ssn, 16, 16, value)
+
+#define WMI_VDEV_VBSS_DYN_INFO_GET_OMI(peer_dyn_info1) WMI_GET_BITS(omi, 0, 16)
+#define WMI_VDEV_VBSS_DYN_INFO_SET_OMI(peer_dyn_info1, value) WMI_SET_BITS(omi, 0, 16, value)
+
+#define WMI_VDEV_VBSS_DYN_INFO_GET_EHT_OMI(peer_dyn_info1) WMI_GET_BITS(eht_omi, 16, 16)
+#define WMI_VDEV_VBSS_DYN_INFO_SET_EHT_OMI(peer_dyn_info1, value) WMI_SET_BITS(eht_omi, 16, 16, value)
+
+#define WMI_VDEV_VBSS_DYN_INFO_GET_PM(peer_dyn_info2) WMI_GET_BITS(pm, 0, 1)
+#define WMI_VDEV_VBSS_DYN_INFO_SET_PM(peer_dyn_info2, value) WMI_SET_BITS(pm, 0, 1, value)
 
 
 typedef struct {
