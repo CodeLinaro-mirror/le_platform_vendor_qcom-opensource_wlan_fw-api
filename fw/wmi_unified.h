@@ -369,7 +369,8 @@ typedef enum {
     WMI_GRP_QUIET_OFL,      /* 0x4a Quiet offloads */
     WMI_GRP_ODD,            /* 0x4b ODD */
     WMI_GRP_TDMA,           /* 0x4c TDMA */
-    WMI_GRP_MANUAL_UL_TRIG  /* 0x4d Manual UL OFDMA Trigger */
+    WMI_GRP_MANUAL_UL_TRIG, /* 0x4d Manual UL OFDMA Trigger */
+    WMI_GRP_ENERGY_MGMT,    /* 0x4e energy management */
 } WMI_GRP_ID;
 
 #define WMI_CMD_GRP_START_ID(grp_id) (((grp_id) << 12) | 0x1)
@@ -850,6 +851,9 @@ typedef enum {
 
     /* WMI command to setup reorder queue for multiple TIDs */
     WMI_PEER_MULTIPLE_REORDER_QUEUE_SETUP_CMDID,
+
+    /** Customize MCS range for specific tid */
+    WMI_PEER_TID_RATE_CUSTOM_CMDID,
 
     /* beacon/management specific commands */
 
@@ -1728,6 +1732,21 @@ typedef enum {
 
     /** WMI Command to set Manual MU UL OFDMA trigger parameters */
     WMI_VDEV_SET_ULOFDMA_MANUAL_MU_TRIG_CMDID,
+
+
+    /** WMI commands specific to Energy Management **/
+    /** WMI cmd used to control PCIe config */
+    WMI_ENERGY_MGMT_PCIE_CONFIG_CMDID = WMI_CMD_GRP_START_ID(WMI_GRP_ENERGY_MGMT),
+    /** WMI cmd used to control PCIe LPM */
+    WMI_ENERGY_MGMT_PCIE_LPM_CMDID,
+    /** WMI cmd used to control Clock and Voltage config */
+    WMI_ENERGY_MGMT_DCVS_CONFIG_CMDID,
+    /** WMI cmd used to control AP Dynamic Power Save feature */
+    WMI_ENERGY_MGMT_EDPS_CONFIG_CMDID,
+    /** WMI cmd used to control periodic unavailability operation */
+    WMI_ENERGY_MGMT_PUO_CONFIG_CMDID,
+    /** WMI cmd used to control ECO mode config */
+    WMI_ENERGY_MGMT_ECO_MODE_CONFIG_CMDID,
 } WMI_CMD_ID;
 
 typedef enum {
@@ -5165,6 +5184,13 @@ typedef struct {
                 reserved: 31;
         };
     };
+    /**
+     * @brief HAPS flags setting for power save config
+     * bit 0 : Enable disable haps feature
+     * bit 1 : Sync and update qtime cnss timestamp
+     * BIT 2-31: Reserved
+     */
+    A_UINT32 dp_haps_config;
 } wmi_resource_config;
 #define WMI_RSRC_CFG_APF_DATA_OFLD_ENABLE_GET(word32) \
     WMI_GET_BITS(word32, 0, 1)
@@ -8895,6 +8921,11 @@ typedef enum {
 } WMI_SCHED_MODE_FLAGS;
 
 typedef enum {
+    WMI_PDEV_PARAM_TEMP_TX_POWER_LIMIT_RESET = 0,
+    WMI_PDEV_PARAM_TEMP_TX_POWER_LIMIT_SET,
+} wmi_pdev_param_set_temp_tx_power_limit;
+
+typedef enum {
     /** TX chain mask */
     WMI_PDEV_PARAM_TX_CHAIN_MASK = 0x1,
     /** RX chain mask */
@@ -10079,6 +10110,12 @@ typedef enum {
 
     /* To enable/disable DFS radar detection for scan radio */
     WMI_PDEV_PARAM_ENABLE_SCAN_RADIO_DFS,
+
+    /* configure CCE rules based on ethertype match */
+    WMI_PDEV_PARAM_CONFIG_CUSTOM_CCE_RULE,
+
+    /* temporary tx power limit */
+    WMI_PDEV_PARAM_TEMP_TX_POWER_LIMIT,
 } WMI_PDEV_PARAM;
 
 #define WMI_PDEV_ONLY_BSR_TRIG_IS_ENABLED(trig_type) WMI_GET_BITS(trig_type, 0, 1)
@@ -10738,6 +10775,16 @@ typedef struct {
  */
 } wmi_pdev_tpc_config_event_fixed_param;
 
+
+typedef enum {
+    WMI_ASD_PRIMARY_ANT   = 0,
+    WMI_ASD_DIVERSITY_ANT = 1,
+    WMI_ASD_THIRD_ANT     = 2,
+    WMI_ASD_FOURTH_ANT    = 3,
+
+    WMI_ASD_MAX_ANTTYPE = 4
+} WMI_ASD_ANT_TYPE;
+
 typedef struct {
     /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_pdev_div_rssi_antid_event_fixed_param */
     A_UINT32 tlv_header;
@@ -10751,6 +10798,17 @@ typedef struct {
     wmi_mac_addr macaddr;
     /* EVM value for stream0 and stream1 20Mhz, dB units */
     A_INT32 chain_evm[WMI_MAX_CHAINS];
+    /** num_antennas_valid:
+     * how many elements in the WMI_ASD_MAX_ANTTYPE arrays below
+     * contain valid info
+     */
+    A_UINT32 num_antennas_valid;
+    /** switch count on each antenna attached to each chain */
+    A_UINT32 ant_cnt[WMI_MAX_CHAINS][WMI_ASD_MAX_ANTTYPE];
+    /** stay duration on each antenna attached to each chain (units: ms) */
+    A_UINT32 ant_dur[WMI_MAX_CHAINS][WMI_ASD_MAX_ANTTYPE];
+    /** RSSI on each antenna attached to each chain in dbm */
+    A_INT32 ant_rssi[WMI_MAX_CHAINS][WMI_ASD_MAX_ANTTYPE];
 } wmi_pdev_div_rssi_antid_event_fixed_param;
 
 typedef struct {
@@ -11687,10 +11745,6 @@ typedef struct {
  * This TLV is followed by another TLV of array of bytes
  *   num_channels * size of(struct wmi_channel_stats)
  */
-/* If WMI_REQUEST_VDEV_RECV_BCN_STAT is set in stats_id, then TLV
- * wmi_recv_bcn_stats wmi_recv_bcn_stats[]
- * follows the other TLVs
- */
 } wmi_radio_link_stats_event_fixed_param;
 
 /* per rate statistics */
@@ -12185,6 +12239,10 @@ typedef struct {
  */
 /* If WMI_REQUEST_PDEV_TELEMETRY_STAT is set in stats_id, then TLV
  * wmi_pdev_telemetry_stats wmi_pdev_telemetry_stats[]
+ * follows the other TLVs
+ */
+/* If WMI_REQUEST_VDEV_RECV_BCN_STAT is set in stats_id, then TLV
+ * wmi_recv_bcn_stats wmi_recv_bcn_stats[]
  * follows the other TLVs
  */
 } wmi_stats_event_fixed_param;
@@ -18343,6 +18401,12 @@ enum WMI_VDEV_UP_FLAGS {
     WMI_VDEV_UP_FLAG_VBSS_PASSIVE  = 0x00000004,
 };
 
+typedef struct{
+    A_UINT32 tlv_header; /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_co_located_chan_info */
+    /* co-located link frequency discovered on connected ap */
+    A_UINT32 link_freq; /* MHz units */
+} wmi_co_located_chan_info;
+
 typedef struct {
     A_UINT32 tlv_header; /* TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_vdev_up_cmdid_fixed_param */
     /** unique id identifying the VDEV, generated by the caller */
@@ -18359,6 +18423,10 @@ typedef struct {
     A_UINT32 profile_num;
     /** flags - this is a bitwise-or combination of WMI_VDEV_UP_FLAGS values */
     A_UINT32 flags;
+    /* The below TLVs follow this struct:
+     *   - wmi_co_located_chan_info co_located_chan_info[];
+     *     Connected AP's co-located channel info
+     */
 } wmi_vdev_up_cmd_fixed_param;
 
 typedef struct {
@@ -20644,91 +20712,96 @@ enum wmi_sta_ps_scheme_cfg {
     WMI_STA_PS_OPM_CONSERVATIVE = 0,
     WMI_STA_PS_OPM_AGGRESSIVE = 1,
     WMI_STA_PS_USER_DEF = 2,
+    WMI_STA_PS_LATENCY_DEF = 3,
 };
 
 enum wmi_sta_powersave_param {
-/**
- * Controls how frames are retrievd from AP while STA is sleeping
- *
- * (see enum wmi_sta_ps_param_rx_wake_policy)
- */
-WMI_STA_PS_PARAM_RX_WAKE_POLICY = 0,
+    /**
+     * Controls how frames are retrievd from AP while STA is sleeping
+     *
+     * (see enum wmi_sta_ps_param_rx_wake_policy)
+     */
+    WMI_STA_PS_PARAM_RX_WAKE_POLICY = 0,
 
-/**
- * The STA will go active after this many TX
- *
- * (see enum wmi_sta_ps_param_tx_wake_threshold)
- */
-WMI_STA_PS_PARAM_TX_WAKE_THRESHOLD = 1,
+    /**
+     * The STA will go active after this many TX
+     *
+     * (see enum wmi_sta_ps_param_tx_wake_threshold)
+     */
+    WMI_STA_PS_PARAM_TX_WAKE_THRESHOLD = 1,
 
-/**
- * Number of PS-Poll to send before STA wakes up
- *
- * (see enum wmi_sta_ps_param_pspoll_count)
- *
- */
-WMI_STA_PS_PARAM_PSPOLL_COUNT = 2,
+    /**
+     * Number of PS-Poll to send before STA wakes up
+     *
+     * (see enum wmi_sta_ps_param_pspoll_count)
+     *
+     */
+    WMI_STA_PS_PARAM_PSPOLL_COUNT = 2,
 
-/**
- * TX/RX inactivity time in msec before going to sleep.
- *
- * The power save SM will monitor tx/rx activity on the VDEV, if no
- * activity for the specified msec of the parameter the Power save SM will
- * go to sleep.
- */
-WMI_STA_PS_PARAM_INACTIVITY_TIME = 3,
+    /**
+     * TX/RX inactivity time in msec before going to sleep.
+     *
+     * The power save SM will monitor tx/rx activity on the VDEV, if no
+     * activity for the specified msec of the parameter the Power save SM will
+     * go to sleep.
+     */
+    WMI_STA_PS_PARAM_INACTIVITY_TIME = 3,
 
-/**
- * Set uapsd configuration.
- *
- * (see enum wmi_sta_ps_param_uapsd)
- */
-WMI_STA_PS_PARAM_UAPSD = 4,
+    /**
+     * Set uapsd configuration.
+     *
+     * (see enum wmi_sta_ps_param_uapsd)
+     */
+    WMI_STA_PS_PARAM_UAPSD = 4,
 
-/**
- * Number of PS-Poll to send before STA wakes up in QPower Mode
- */
-WMI_STA_PS_PARAM_QPOWER_PSPOLL_COUNT = 5,
+    /**
+     * Number of PS-Poll to send before STA wakes up in QPower Mode
+     */
+    WMI_STA_PS_PARAM_QPOWER_PSPOLL_COUNT = 5,
 
-/**
- * Enable OPM
- */
-WMI_STA_PS_ENABLE_QPOWER = 6,
-    WMI_STA_PS_ENABLE_OPM = WMI_STA_PS_ENABLE_QPOWER, /* alias */
+    /**
+     * Enable OPM
+     */
+    WMI_STA_PS_ENABLE_QPOWER = 6,
+        WMI_STA_PS_ENABLE_OPM = WMI_STA_PS_ENABLE_QPOWER, /* alias */
 
-/**
- * Number of TX frames before the entering the Active state
- */
-WMI_STA_PS_PARAM_QPOWER_MAX_TX_BEFORE_WAKE = 7,
+    /**
+     * Number of TX frames before the entering the Active state
+     */
+    WMI_STA_PS_PARAM_QPOWER_MAX_TX_BEFORE_WAKE = 7,
 
-/**
- * QPower SPEC PSPOLL interval
- */
-WMI_STA_PS_PARAM_QPOWER_SPEC_PSPOLL_WAKE_INTERVAL = 8,
+    /**
+     * QPower SPEC PSPOLL interval
+     */
+    WMI_STA_PS_PARAM_QPOWER_SPEC_PSPOLL_WAKE_INTERVAL = 8,
 
-/**
- * Max SPEC PSPOLL to be sent when the PSPOLL response has
- * no-data bit set
- */
-WMI_STA_PS_PARAM_QPOWER_SPEC_MAX_SPEC_NODATA_PSPOLL = 9,
+    /**
+     * Max SPEC PSPOLL to be sent when the PSPOLL response has
+     * no-data bit set
+     */
+    WMI_STA_PS_PARAM_QPOWER_SPEC_MAX_SPEC_NODATA_PSPOLL = 9,
 
-/**
- * Max value of ITO reset when there is no tx-rx
- * after AP has set the TIM bit
- */
-WMI_STA_PS_PARAM_MAX_RESET_ITO_COUNT_ON_TIM_NO_TXRX = 10,
+    /**
+     * Max value of ITO reset when there is no tx-rx
+     * after AP has set the TIM bit
+     */
+    WMI_STA_PS_PARAM_MAX_RESET_ITO_COUNT_ON_TIM_NO_TXRX = 10,
 
-/**
- * Flag to enable/disable Powersave Optimization
- * in WOW
- */
-WMI_STA_PS_PARAM_ENABLE_PS_OPT_IN_WOW = 11,
+    /**
+     * Flag to enable/disable Powersave Optimization
+     * in WOW
+     */
+    WMI_STA_PS_PARAM_ENABLE_PS_OPT_IN_WOW = 11,
 
-/**
- *  Speculative interval in ms
- */
-WMI_STA_PS_PARAM_SPEC_WAKE_INTERVAL = 12,
+    /**
+     *  Speculative interval in ms
+     */
+    WMI_STA_PS_PARAM_SPEC_WAKE_INTERVAL = 12,
 
+    /**
+     *  Value determines the ITO level to apply
+     */
+    WMI_STA_PS_PARAM_ITO_LEVEL = 13,
 };
 
 typedef struct {
@@ -21244,6 +21317,9 @@ typedef struct {
     wmi_mlo_flags mlo_flags; /* only mlo enable flag need by STA mode peer create */
 } wmi_peer_create_mlo_params;
 
+#define WMI_PEER_CREATE_GET_HW_PEER_ID_VALID(flags) WMI_GET_BITS(flags,0,1)
+#define WMI_PEER_CREATE_SET_HW_PEER_ID_VALID(flags) WMI_SET_BITS(flags,0,1,value)
+
 typedef struct {
     A_UINT32 tlv_header; /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_peer_create_cmd_fixed_param */
     /** unique id identifying the VDEV, generated by the caller */
@@ -21252,7 +21328,19 @@ typedef struct {
     wmi_mac_addr peer_macaddr;
     /** peer type: see enum values above */
     A_UINT32 peer_type;
-/* The TLVs follows this structure:
+    /** Peer create flags */
+    union {
+        struct {
+            A_UINT32 hw_peer_id_valid :1,
+                     reserved         :31;
+        };
+        A_UINT32 flags;
+    };
+    /** Global sw peer id, valid only if non-zero */
+    A_UINT32 sw_peer_id;
+    /** Global hardware id, valid only if hw_peer_id_valid is set */
+    A_UINT32 hw_peer_id;
+/* The TLVs follow this structure:
  * wmi_peer_create_mlo_params mlo_params[]; <-- MLO flags on peer_create
  *     Optional TLV, only present for MLO peers.
  *     If the peer is non-MLO, the array length should be 0.
@@ -22151,6 +22239,101 @@ typedef struct {
      */
     A_UINT32 bw;
 } wmi_peer_assoc_operating_mode_params;
+
+
+typedef enum {
+    WMI_MGMT_TID_MSDUQ_LINK_SPECIFIC,/* legacy and link peer */
+    WMI_MGMT_TID_MSDUQ_LINK_AGNOSTIC,
+    WMI_MGMT_TID_MSDUQ_TYPE_MAX,
+} WMI_MGMT_TID_MSDUQ_TYPE;
+
+#define WMI_MGMT_MSDUQ_GET_LINK_ID(msduq_type) WMI_GET_BITS(msduq_type,0,3)
+#define WMI_MGMT_MSDUQ_SET_LINK_ID(msduq_type) WMI_SET_BITS(msduq_type,0,3,value)
+#define WMI_MGMT_MSDUQ_GET_FLOW_TYPE(msduq_type) WMI_GET_BITS(msduq_type,3,5)
+#define WMI_MGMT_MSDUQ_SET_FLOW_TYPE(msduq_type) WMI_SET_BITS(msduq_type,3,5,value)
+
+typedef struct {
+    A_UINT32 tlv_header; /* TLV tag and Len. Tag: WMITLV_TAG_STRUC_wmi_peer_assoc_mgmt_msduq_params*/
+    union {
+        struct {
+            A_UINT32 link_id   :  3, /* HW Link ID */
+                     flow_type :  5, /* WMI_MGMT_TID_MSDUQ_TYPE */
+                     reserved  : 24;
+        };
+        A_UINT32 msduq_type;
+    };
+
+    /* 40 bit physical address, 256 bytes alligned, LSB 8 bits are zero */
+    A_UINT32 mgmt_msduq_paddr_39_8;
+} wmi_peer_assoc_mgmt_msduq_params;
+
+typedef struct {
+    A_UINT32 tlv_header; /* TAG_ID : WMITLV_TAG_STRUC_wmi_peer_assoc_mgmt_mpduq_params */
+    /* 40 bit physical address, 256 bytes alligned, LSB 8 bits are zero */
+    A_UINT32 mgmt_mpduq_paddr_39_8;
+    A_UINT32 pn_paddr_31_0;
+    A_UINT32 pn_paddr_39_32;
+} wmi_peer_assoc_mgmt_mpduq_params;
+
+#define WMI_HOL_QUEUE_GET_PEER_ID(mpduq_msduq_number) \
+    WMI_GET_BITS(mpduq_msduq_number,0,12)
+#define WMI_HOL_QUEUE_SET_PEER_ID(mpduq_msduq_number) \
+    WMI_SET_BITS(mpduq_msduq_number,0,12,value)
+#define WMI_HOL_QUEUE_GET_TID_NUM(mpduq_msduq_number) \
+    WMI_GET_BITS(mpduq_msduq_number,12,5)
+#define WMI_HOL_QUEUE_SET_TID_NUM(mpduq_msduq_number) \
+    WMI_SET_BITS(mpduq_msduq_number,12,5,value)
+#define WMI_HOL_QUEUE_GET_MPDUQ_TYPE(mpduq_msduq_number) \
+    WMI_GET_BITS(mpduq_msduq_number,17,5)
+#define WMI_HOL_MSDUQ_SET_MPDUQ_TYPE(mpduq_msduq_number) \
+    WMI_SET_BITS(mpduq_msduq_number,17,5,value)
+#define WMI_HOL_QUEUE_GET_MSDUQ_TYPE(mpduq_msduq_number) \
+    WMI_GET_BITS(mpduq_msduq_number,22,5)
+#define WMI_HOL_MSDUQ_SET_MSDUQ_TYPE(mpduq_msduq_number) \
+    WMI_SET_BITS(mpduq_msduq_number,22,5,value)
+
+typedef struct {
+    A_UINT32 tlv_header; /* TAG_ID : WMITLV_TAG_STRUC_wmi_peer_assoc_hol_mdsuq_params */
+
+    /**
+     * A_UINT32
+     *     WMI_HOL_MSDUQ_GET_PEER_ID / WMI_HOL_MSDU_SET_PEER_ID
+     *     peer_id:12,
+     *
+     *     WMI_HOL_MSDUQ_GET_TID_NUM / WMI_HOL_MSDUQ_SET_TID_NUM
+     *     tid_num:5,
+     *
+     *     WMI_HOL_MPDUQ_GET_QUEUE_TYPE / WMI_HOL_MPDUQ_SET_QUEUE_TYPE
+     *     mpduq_type:5,
+     *
+     *     WMI_HOL_MSDUQ_GET_QUEUE_TYPE / WMI_HOL_MSDUQ_SET_QUEUE_TYPE
+     *     msduq_type:5,
+     *
+     *     rsvd:5;
+     */
+    union {
+        struct {
+            A_UINT32 peer_id    : 12,
+                     tid_num    :  5,
+                     mpduq_type :  5,
+                     msduq_type :  5,
+                     reserved   :  5;
+        };
+        A_UINT32 mpduq_msduq_number;
+    };
+
+    /* 40 bit address, 256 bytes alligned LSB 8 bits are zero */
+    A_UINT32 mpduq_paddr_39_8;
+
+    /* 40 bit address, 256 bytes alligned LSB 8 bits are zero */
+    A_UINT32 msduq_paddr_39_8;
+
+    /* First 32 bits for pn physical address */
+    A_UINT32 pn_paddr_31_0;
+
+    /* Upper 8 bits of 40 bit pn physical address */
+    A_UINT32 pn_paddr_39_32;
+} wmi_peer_assoc_hol_mdsuq_params;
 
 /*
  * PEER assoc_flags for assoc complete:
@@ -33702,6 +33885,23 @@ typedef struct {
     A_UINT32 tid_mask; /* bits 0 to 15 = QoS TIDs, bit 16 = non-qos TID */
 } wmi_peer_reorder_queue_remove_cmd_fixed_param;
 
+/**
+ * This command is sent from WLAN host driver to firmware for
+ * customizing MCS range & retry count for specific TID of specific peer
+ */
+typedef struct {
+    A_UINT32 tlv_header;
+    A_UINT32 vdev_id;
+    wmi_mac_addr peer_macaddr; /* Peer MAC address */
+    A_UINT32 tid;
+    /* on_off:
+     * Rate customization enable/disable. 1 for enable and 0 for disable.
+     */
+    A_UINT32 on_off;
+    A_UINT32 bw; /* Unit MHz */
+    A_UINT32 retry_count;
+} wmi_peer_tid_rate_custom_cmd_fixed_param;
+
 
 /* DEPRECATED - use wmi_pdev_set_mac_config_response_event_fixed_param instead */
 typedef struct {
@@ -37441,6 +37641,9 @@ typedef enum wmi_hw_mode_config_type {
 #define WMI_SUPPORT_11BE_GET(flags) WMI_GET_BITS(flags, 6, 1)
 #define WMI_SUPPORT_11BE_SET(flags, value) WMI_SET_BITS(flags, 6, 1, value)
 
+#define WMI_SUPPORT_11BN_GET(flags) WMI_GET_BITS(flags, 7, 1)
+#define WMI_SUPPORT_11BN_SET(flags, value) WMI_SET_BITS(flags, 7, 1, value)
+
 #define WMI_MAX_MUBFEE_GET(flags) WMI_GET_BITS(flags, 28, 4)
 #define WMI_MAX_MUBFEE_SET(flags, value) WMI_SET_BITS(flags, 28, 4, value)
 
@@ -37620,8 +37823,9 @@ typedef struct {
                      supports_11ac:1,
                      supports_11ax:1,
                      supports_11be:1,
+                     supports_11bn:1,
 
-                     unused: 21,
+                     unused: 20,
 
                      max_mubfee: 4; /* max MU beamformees supported per MAC */
         };
@@ -39319,6 +39523,13 @@ static INLINE A_UINT8 *wmi_id_to_name(A_UINT32 wmi_command)
         WMI_RETURN_STRING(WMI_MLO_LINK_TTLM_COMPLETE_CMDID);
         WMI_RETURN_STRING(WMI_BPF_SET_SUPPORTED_OFFLOAD_BITMAP_CMDID);
         WMI_RETURN_STRING(WMI_BPF_SET_APF_MODE_CMDID);
+        WMI_RETURN_STRING(WMI_ENERGY_MGMT_PCIE_CONFIG_CMDID);
+        WMI_RETURN_STRING(WMI_ENERGY_MGMT_PCIE_LPM_CMDID);
+        WMI_RETURN_STRING(WMI_ENERGY_MGMT_DCVS_CONFIG_CMDID);
+        WMI_RETURN_STRING(WMI_ENERGY_MGMT_EDPS_CONFIG_CMDID);
+        WMI_RETURN_STRING(WMI_ENERGY_MGMT_PUO_CONFIG_CMDID);
+        WMI_RETURN_STRING(WMI_ENERGY_MGMT_ECO_MODE_CONFIG_CMDID);
+        WMI_RETURN_STRING(WMI_PEER_TID_RATE_CUSTOM_CMDID);
     }
 
     return (A_UINT8 *) "Invalid WMI cmd";
@@ -51124,6 +51335,93 @@ typedef struct {
      *   - wmi_vdev_vbss_peer_pn_info[];
      */
 } wmi_vdev_vbss_config_event_fixed_param;
+
+
+typedef enum {
+    /* Channel bandwidth based semi static PCIe config */
+    WMI_PCIE_CONFIG_TYPE_CHANNEL_BANDWIDTH,
+    /* Force a specific PCIe config */
+    WMI_PCIE_CONFIG_TYPE_FORCED_STATIC,
+} wmi_pcie_config_type_e;
+
+typedef struct {
+    /** TLV tag and len; tag equals
+    * WMITLV_TAG_STRUC_wmi_energy_mgmt_pcie_config_cmd_fixed_param */
+    A_UINT32 tlv_header;
+    /** enable or disable PCIe config */
+    A_UINT32 enable;
+    /* PCIe config type (holds a wmi_pcie_config_type_e value) */
+    A_UINT32 config_type;
+    /** pcie_gen: pcie generation to be used
+     *  pcie_lane:pcie lane config (lane number) to be used
+     */
+    A_UINT32 pcie_gen;
+    A_UINT32 pcie_lane;
+} wmi_energy_mgmt_pcie_config_cmd_fixed_param;
+
+typedef struct {
+    /** TLV tag and len; tag equals
+    * WMITLV_TAG_STRUC_wmi_energy_mgmt_pcie_lpm_cmd_fixed_param */
+    A_UINT32 tlv_header;
+    /** enable or disable PCIe LPM */
+    A_UINT32 enable;
+} wmi_energy_mgmt_pcie_lpm_cmd_fixed_param;
+
+typedef struct {
+    /** TLV tag and len; tag equals
+    * WMITLV_TAG_STRUC_wmi_energy_mgmt_dcvs_config_cmd_fixed_param */
+    A_UINT32 tlv_header;
+    /** enable or disable DCVS config */
+    A_UINT32 enable;
+} wmi_energy_mgmt_dcvs_config_cmd_fixed_param;
+
+typedef struct {
+    /** TLV tag and len; tag equals
+    * WMITLV_TAG_STRUC_wmi_energy_mgmt_dps_config_cmd_fixed_param */
+    A_UINT32 tlv_header;
+    /** enable or disable DPS config */
+    A_UINT32 enable;
+    /** PDEV identifier */
+    A_UINT32 pdev_id;
+    /** Channel to be used in DPS Low cap mode, freq must match the primary home chan freq */
+    wmi_channel low_cap_channel;
+    /** Tx chainmask to be used in DPS Low cap mode */
+    A_UINT32 low_cap_tx_chainmask;
+    /** Rx chainmask to be used in DPS Low cap mode */
+    A_UINT32 low_cap_rx_chainmask;
+    /** Mbps throughput after which DPS will be exited and notified to Host */
+    A_UINT32 exit_thpt_thrsld_mbps;
+    /** number of wakeups per second after which DPS will be exited and notified to Host */
+    A_UINT32 exit_wakeup_thrsld_per_second;
+} wmi_energy_mgmt_edps_config_cmd_fixed_param;
+
+typedef struct {
+    /** TLV tag and len; tag equals
+    * WMITLV_TAG_STRUC_wmi_energy_mgmt_puo_config_cmd_fixed_param */
+    A_UINT32 tlv_header;
+    /** enable or disable DPS config */
+    A_UINT32 enable;
+    /** PDEV identifier */
+    A_UINT32 pdev_id;
+    /** Channel to be used in PUO Low cap mode, freq must match the primary home chan freq */
+    wmi_channel low_cap_channel;
+    /** Tx chainmask to be used in Low cap mode */
+    A_UINT32 low_cap_tx_chainmask;
+    /** Rx chainmask to be used in Low cap mode */
+    A_UINT32 low_cap_rx_chainmask;
+    /** minimum duration required between SP end and SP start to trigger entering to doze state */
+    A_UINT32 min_doze_thrsld_in_us;
+} wmi_energy_mgmt_puo_config_cmd_fixed_param;
+
+typedef struct {
+    /** TLV tag and len; tag equals
+    * WMITLV_TAG_STRUC_wmi_energy_mgmt_eco_mode_config_cmd_fixed_param */
+    A_UINT32 tlv_header;
+    /** enable or disable DPS config */
+    A_UINT32 enable;
+    /** PDEV identifier */
+    A_UINT32 pdev_id;
+} wmi_energy_mgmt_eco_mode_config_cmd_fixed_param;
 
 
 
