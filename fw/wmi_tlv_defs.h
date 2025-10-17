@@ -1504,6 +1504,14 @@ typedef enum {
     WMITLV_TAG_STRUC_wmi_peer_npca_cap_cmd_fixed_param,
     WMITLV_TAG_STRUC_wmi_pdev_npca_ap_cap_resp_event_fixed_param,
     WMITLV_TAG_STRUC_wmi_wfa_config_ml,
+    WMITLV_TAG_STRUC_wmi_pdev_multi_vdev_get_ac_queue_depth_cmd_fixed_param,
+    WMITLV_TAG_STRUC_wmi_pdev_multi_vdev_ac_queue_depth_event_fixed_param,
+    WMITLV_TAG_STRUC_wmi_vdev_ac_info,
+    WMITLV_TAG_STRUC_wmi_vdev_get_tpc_ie_power_cmd_fixed_param,
+    WMITLV_TAG_STRUC_wmi_vdev_tpc_ie_power_event_fixed_param,
+    WMITLV_TAG_STRUC_wmi_pdev_coex_stats,
+    WMITLV_TAG_STRUC_wmi_vdev_traffic_monitoring_cmd_fixed_param,
+    WMITLV_TAG_STRUC_wmi_energy_mgmt_dps_assisting_role_config_cmd_fixed_param,
 } WMITLV_TAG_ID;
 /*
  * IMPORTANT: Please add _ALL_ WMI Commands Here.
@@ -2078,6 +2086,11 @@ typedef enum {
     OP(WMI_PEER_TID_RATE_CUSTOM_CMDID) \
     OP(WMI_PDEV_NPCA_AP_CAP_CMDID) \
     OP(WMI_PEER_NPCA_CAP_CMDID) \
+    OP(WMI_PDEV_MULTI_VDEV_GET_AC_QUEUE_DEPTH_CMDID) \
+    OP(WMI_VDEV_GET_TPC_IE_POWER_CMDID) \
+    OP(WMI_PEER_ASSOC_V2_CMDID) \
+    OP(WMI_VDEV_TRAFFIC_MONITORING_CMDID) \
+    OP(WMI_ENERGY_MGMT_DPS_ASSISTING_ROLE_CONFIG_CMDID) \
     /* add new CMD_LIST elements above this line */
 
 
@@ -2416,6 +2429,8 @@ typedef enum {
     OP(WMI_HW_BLACKLIST_CHAN_EVENTID) \
     OP(WMI_PDEV_SUSPEND_EVENTID) \
     OP(WMI_PDEV_NPCA_AP_CAP_RESP_EVENTID) \
+    OP(WMI_PDEV_MULTI_VDEV_AC_QUEUE_DEPTH_EVENTID) \
+    OP(WMI_VDEV_TPC_IE_POWER_EVENTID) \
     /* add new EVT_LIST elements above this line */
 
 
@@ -2919,8 +2934,35 @@ WMITLV_CREATE_PARAM_STRUC(WMI_VDEV_IPSEC_NATKEEPALIVE_FILTER_CMDID);
 /* NOTE:
  * No further TLVs can be added to this message;
  * it is already at the target's WMI_MAX_NUM_TLVS limit (13).
+ *
+ * Note that the WMI_PEER_ASSOC_V2_CMDID (below) can support additional TLVs.
  */
 WMITLV_CREATE_PARAM_STRUC(WMI_PEER_ASSOC_CMDID);
+
+/* WMI_PEER_ASSOC_V2_CMD - version 2 of the PEER_ASSOC cmd, allowing more TLVs
+ * This cmd message mirrors the WMI_PEER_ASSOC_CMDID message, but has the
+ * capacity for extra TLVs beyond those in the WMI_PEER_ASSOC_CMDID definition.
+ * This message can only be used if the target advertises support for
+ * WMI_MAX_NUM_EXT_TLVS (via the WMI_SERVICE_EXT_TLV_SUPPORT flag).
+ */
+#define WMITLV_TABLE_WMI_PEER_ASSOC_V2_CMDID(id,op,buf,len) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_peer_assoc_complete_cmd_fixed_param, wmi_peer_assoc_complete_cmd_fixed_param, fixed_param, WMITLV_SIZE_FIX) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_BYTE, A_UINT8, peer_legacy_rates, WMITLV_SIZE_VAR) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_BYTE, A_UINT8, peer_ht_rates, WMITLV_SIZE_VAR) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_vht_rate_set, wmi_vht_rate_set, peer_vht_rates, WMITLV_SIZE_FIX) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_he_rate_set, peer_he_rates, WMITLV_SIZE_VAR) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_peer_assoc_mlo_params, mlo_params, WMITLV_SIZE_VAR) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_eht_rate_set, peer_eht_rates, WMITLV_SIZE_VAR) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_peer_assoc_mlo_partner_link_params, partner_link_params, WMITLV_SIZE_VAR) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_peer_assoc_tid_to_link_map, peer_tid_to_link_map, WMITLV_SIZE_VAR) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_peer_assoc_operating_mode_params, operating_mode_params, WMITLV_SIZE_VAR) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_peer_assoc_mgmt_mpduq_params, mgmt_mpduq_params, WMITLV_SIZE_VAR) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_peer_assoc_mgmt_msduq_params, mgmt_msduq_params, WMITLV_SIZE_VAR) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_peer_assoc_hol_mdsuq_params, hol_mdsuq_params, WMITLV_SIZE_VAR)\
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_peer_npca_cap_params, peer_npca_cap_params, WMITLV_SIZE_VAR)\
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_peer_create_mlo_params, create_mlo_params, WMITLV_SIZE_VAR)
+
+WMITLV_CREATE_PARAM_STRUC(WMI_PEER_ASSOC_V2_CMDID);
 
 /* Peer Set Rate Report Condition Cmd */
 #define WMITLV_TABLE_WMI_PEER_SET_RATE_REPORT_CONDITION_CMDID(id,op,buf,len) \
@@ -5051,6 +5093,12 @@ WMITLV_CREATE_PARAM_STRUC(WMI_RUNTIME_DPD_RECAL_CMDID);
 
 WMITLV_CREATE_PARAM_STRUC(WMI_GET_TPC_POWER_CMDID);
 
+/** Get TPC IE TX power value */
+#define WMITLV_TABLE_WMI_VDEV_GET_TPC_IE_POWER_CMDID(id,op,buf,len) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_vdev_get_tpc_ie_power_cmd_fixed_param, wmi_vdev_get_tpc_ie_power_cmd_fixed_param, fixed_param, WMITLV_SIZE_FIX)
+
+WMITLV_CREATE_PARAM_STRUC(WMI_VDEV_GET_TPC_IE_POWER_CMDID);
+
 /* TWT enable cmd */
 #define WMITLV_TABLE_WMI_TWT_ENABLE_CMDID(id,op,buf,len) \
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_twt_enable_cmd_fixed_param, wmi_twt_enable_cmd_fixed_param, fixed_param, WMITLV_SIZE_FIX)
@@ -5864,6 +5912,21 @@ WMITLV_CREATE_PARAM_STRUC(WMI_ENERGY_MGMT_ECO_MODE_CONFIG_CMDID);
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_UINT32, A_UINT32, rate_code, WMITLV_SIZE_VAR)
 WMITLV_CREATE_PARAM_STRUC(WMI_PEER_TID_RATE_CUSTOM_CMDID);
 
+/* pdev per-vdev queue depth report request cmd */
+#define WMITLV_TABLE_WMI_PDEV_MULTI_VDEV_GET_AC_QUEUE_DEPTH_CMDID(id,op,buf,len) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_pdev_multi_vdev_get_ac_queue_depth_cmd_fixed_param, wmi_pdev_multi_vdev_get_ac_queue_depth_cmd_fixed_param, fixed_param, WMITLV_SIZE_FIX)
+WMITLV_CREATE_PARAM_STRUC(WMI_PDEV_MULTI_VDEV_GET_AC_QUEUE_DEPTH_CMDID);
+
+/* vdev traffic monitoring request cmd */
+#define WMITLV_TABLE_WMI_VDEV_TRAFFIC_MONITORING_CMDID(id,op,buf,len) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_vdev_traffic_monitoring_cmd_fixed_param, wmi_vdev_traffic_monitoring_cmd_fixed_param, fixed_param, WMITLV_SIZE_FIX)
+WMITLV_CREATE_PARAM_STRUC(WMI_VDEV_TRAFFIC_MONITORING_CMDID);
+
+/* WMI command to control Dynamic Power Save - AP Assisting role config */
+#define WMITLV_TABLE_WMI_ENERGY_MGMT_DPS_ASSISTING_ROLE_CONFIG_CMDID(id,op,buf,len) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_energy_mgmt_dps_assisting_role_config_cmd_fixed_param, wmi_energy_mgmt_dps_assisting_role_config_cmd_fixed_param, fixed_param, WMITLV_SIZE_FIX)
+WMITLV_CREATE_PARAM_STRUC(WMI_ENERGY_MGMT_DPS_ASSISTING_ROLE_CONFIG_CMDID);
+
 
 
 /************************** TLV definitions of WMI events *******************************/
@@ -6486,7 +6549,8 @@ WMITLV_CREATE_PARAM_STRUC(WMI_HOST_SWFDA_EVENTID);
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_vdev_extd_stats, vdev_extd_stats, WMITLV_SIZE_VAR) \
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_pdev_extd_stats, pdev_extd_stats, WMITLV_SIZE_VAR) \
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_pdev_telemetry_stats, pdev_telemetry_stats, WMITLV_SIZE_VAR) \
-    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_recv_bcn_stats, recv_bcn_stats, WMITLV_SIZE_VAR)
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_recv_bcn_stats, recv_bcn_stats, WMITLV_SIZE_VAR) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_pdev_coex_stats, coex_stats, WMITLV_SIZE_VAR)
 WMITLV_CREATE_PARAM_STRUC(WMI_UPDATE_STATS_EVENTID);
 
 /* Update PN response Event */
@@ -7174,6 +7238,10 @@ WMITLV_CREATE_PARAM_STRUC(WMI_PDEV_ANI_OFDM_LEVEL_EVENTID);
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_pdev_tpc_event_fixed_param, wmi_pdev_tpc_event_fixed_param, fixed_param, WMITLV_SIZE_FIX)\
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_UINT32, A_UINT32, tpc, WMITLV_SIZE_VAR)
 WMITLV_CREATE_PARAM_STRUC(WMI_PDEV_TPC_EVENTID);
+
+#define WMITLV_TABLE_WMI_VDEV_TPC_IE_POWER_EVENTID(id,op,buf,len) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_vdev_tpc_ie_power_event_fixed_param, wmi_vdev_tpc_ie_power_event_fixed_param, fixed_param, WMITLV_SIZE_FIX)
+WMITLV_CREATE_PARAM_STRUC(WMI_VDEV_TPC_IE_POWER_EVENTID);
 
 #define WMITLV_TABLE_WMI_PDEV_NFCAL_POWER_ALL_CHANNELS_EVENTID(id,op,buf,len) \
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_pdev_nfcal_power_all_channels_event_fixed_param, wmi_pdev_nfcal_power_all_channels_event_fixed_param, fixed_param, WMITLV_SIZE_FIX) \
@@ -8004,6 +8072,12 @@ WMITLV_CREATE_PARAM_STRUC(WMI_PDEV_POWER_BOOST_EVENTID);
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_UINT32, A_UINT32, scan_freq_list, WMITLV_SIZE_VAR) \
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_scan_cache_info, scan_cache_info, WMITLV_SIZE_VAR)
 WMITLV_CREATE_PARAM_STRUC(WMI_SCAN_CACHE_RESULT_EVENTID);
+
+/* pdev per-vdev queue depth report event */
+#define WMITLV_TABLE_WMI_PDEV_MULTI_VDEV_AC_QUEUE_DEPTH_EVENTID(id,op,buf,len) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_pdev_multi_vdev_ac_queue_depth_event_fixed_param, wmi_pdev_multi_vdev_ac_queue_depth_event_fixed_param, fixed_param, WMITLV_SIZE_FIX) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_vdev_ac_info, vdev_ac_info, WMITLV_SIZE_VAR)
+WMITLV_CREATE_PARAM_STRUC(WMI_PDEV_MULTI_VDEV_AC_QUEUE_DEPTH_EVENTID);
 
 
 #ifdef __cplusplus
