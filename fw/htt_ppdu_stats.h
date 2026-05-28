@@ -501,6 +501,11 @@ enum HTT_PPDU_STATS_SEQ_TYPE {
     HTT_SEQTYPE_BE_UL_MU_OFDMA_TRIG = 13,
     HTT_SEQTYPE_BE_UL_MU_MIMO_TRIG  = 14,
     HTT_SEQTYPE_BE_UL_BSR_TRIG      = 15,
+    HTT_SEQTYPE_BN_MU_MIMO          = 16,
+    HTT_SEQTYPE_BN_MU_OFDMA         = 17,
+    HTT_SEQTYPE_BN_UL_MU_OFDMA_TRIG = 18,
+    HTT_SEQTYPE_BN_UL_MU_MIMO_TRIG  = 19,
+    HTT_SEQTYPE_BN_UL_BSR_TRIG      = 20,
 };
 typedef enum HTT_PPDU_STATS_SEQ_TYPE HTT_PPDU_STATS_SEQ_TYPE;
 
@@ -962,7 +967,16 @@ typedef struct {
      * BIT [3 : 3] - is_combined_ul_bsrp_trigger - Flag to indicate if a
      *               given UL BSRP trigger is sent combined as part of
      *               an existing DL/UL data sequence
-     * BIT [31: 4] - reserved
+     * BIT [4 : 4] - is_sta_dps_seq - Flag to indicate if a TX is to a STA with
+     *               active Dynamic Power Save state (DPS)
+     * BIT [5 : 5] - is_allow_comb_sched_cmd - Flag to indicate if a given TX
+     *               is part of a allowed combined sched_cmd sequence
+     * BIT [6 : 6] - is_abort_comb_sched_cmd - Flag to indicate if a given TX
+     *               is part of a aborted combined sched_cmd sequence
+     * BIT [7 : 7] - is_comb_sched_cmd_pending - Flag to indicate if a the
+     *               first sched_cmd of a combined sched_cmd sequence is
+     *               pending in the current ring.
+     * BIT [31: 8] - reserved
      */
     union {
         A_UINT32 reserved__htt_seq_type;
@@ -972,11 +986,30 @@ typedef struct {
                      is_manual_ulofdma_trigger: 1,
                      is_combined_ul_bsrp_trigger: 1,
                      is_sta_dps_seq: 1,
-                     reserved3:     27;
+                     is_allow_comb_sched_cmd: 1,
+                     is_abort_comb_sched_cmd: 1,
+                     is_comb_sched_cmd_pending: 1,
+                     is_sched_cmd_combined: 1,
+                     reserved3:     23;
         };
     };
     /* Flag to indicate if the channel chosen is 320_1 / 320_2 */
     A_UINT32 chan_type_320mhz;
+
+    /*
+     * BIT [15 :  0] - obss_dur_us reports the remaining OBSS dur when
+     *                 this FES started OTA.
+     * BIT [16 : 16] - oprim indicates M/O primary FES.
+     * BIT [31 : 17] - reserved
+     */
+    union {
+        A_UINT32 reserved__oprim__obss_dur;
+        struct {
+            A_UINT32 obss_dur_us: 16,
+                     oprim:        1,
+                     reserved4:   15;
+        };
+    };
 } htt_ppdu_stats_common_tlv;
 
 #define HTT_PPDU_STATS_USER_COMMON_TLV_TID_NUM_M     0x000000ff
