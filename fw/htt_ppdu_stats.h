@@ -984,11 +984,27 @@ typedef struct {
                      is_allow_comb_sched_cmd: 1,
                      is_abort_comb_sched_cmd: 1,
                      is_comb_sched_cmd_pending: 1,
-                     reserved3:     24;
+                     is_sched_cmd_combined: 1,
+                     reserved3:     23;
         };
     };
     /* Flag to indicate if the channel chosen is 320_1 / 320_2 */
     A_UINT32 chan_type_320mhz;
+
+    /*
+     * BIT [15 :  0] - obss_dur_us reports the remaining OBSS dur when
+     *                 this FES started OTA.
+     * BIT [16 : 16] - oprim indicates M/O primary FES.
+     * BIT [31 : 17] - reserved
+     */
+    union {
+        A_UINT32 reserved__oprim__obss_dur;
+        struct {
+            A_UINT32 obss_dur_us: 16,
+                     oprim:        1,
+                     reserved4:   15;
+        };
+    };
 } htt_ppdu_stats_common_tlv;
 
 #define HTT_PPDU_STATS_USER_COMMON_TLV_TID_NUM_M     0x000000ff
