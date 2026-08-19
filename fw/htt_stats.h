@@ -15440,6 +15440,8 @@ typedef struct {
      * the second command of the combined sequences
      */
     A_UINT32 abort_reason_comb_second_cmd[HTT_STATS_COMB_ABORT_SECOND_CMD_MAX];
+    /** Percentage of window used by OBSS Rx */
+    A_UINT32 obss_rx_airtime;
 } htt_stats_pdev_sched_algo_ofdma_stats_tlv;
 /* preserve old name alias for new name consistent with the tag name */
 typedef htt_stats_pdev_sched_algo_ofdma_stats_tlv
