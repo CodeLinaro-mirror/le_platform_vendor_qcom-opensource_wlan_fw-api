@@ -9504,6 +9504,29 @@ typedef enum {
 
 #define HTT_TX_CV_CORR_MAX_NUM_COLUMNS 8
 
+#define HTT_TX_CV_QUERY_TOTAL_STATUS   70
+#define HTT_TX_CV_QUERY_PER_LINE_LIMIT 10
+
+#define HTT_TX_SOUNDING_MAX_NR 8
+#define HTT_TX_SOUNDING_MAX_NC 4
+
+#define HTT_TX_SOUNDING_DUR_SU_FB_HISTOGRAM 5
+#define HTT_TX_SOUNDING_DUR_MU_FB_HISTOGRAM 5
+#define HTT_TX_SOUNDING_HISTOGRAM_BIN_SIZE  250
+
+#define HTT_TX_SOUNDING_STATS_WIFI_VERSION_M 0x0000000f
+#define HTT_TX_SOUNDING_STATS_WIFI_VERSION_S 0
+
+#define HTT_TX_SOUNDING_STATS_WIFI_VERSION_GET(_var) \
+    (((_var) & HTT_TX_SOUNDING_STATS_WIFI_VERSION_M) >> \
+     HTT_TX_SOUNDING_STATS_WIFI_VERSION_S)
+
+#define HTT_TX_SOUNDING_STATS_WIFI_VERSION_SET(_var, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_TX_SOUNDING_STATS_WIFI_VERSION, _val); \
+        ((_var) |= ((_val) << HTT_TX_SOUNDING_STATS_WIFI_VERSION_S)); \
+    } while (0)
+
 typedef struct {
     htt_tlv_hdr_t tlv_hdr;
     A_UINT32      tx_sounding_mode; /* HTT_TX_XX_SOUNDING_MODE */
@@ -9684,6 +9707,45 @@ typedef struct {
     A_UINT32 lookahead_sounding_ul_cnt;
     /** Total number of times lookahead sounding done for UL MU based on number of users */
     A_UINT32 lookahead_snd_ul_num_users[HTT_TX_PDEV_STATS_NUM_UL_MUMIMO_USER_STATS];
+    /** Total number of times CV query did not get triggered. */
+    A_UINT32 cv_query_not_triggered;
+    /** Total counters for various CV query completion status. */
+    A_UINT32 cv_query_status[HTT_TX_CV_QUERY_TOTAL_STATUS];
+
+    /** Total number of times sounding was disabled due to higher sounding duration */
+    A_UINT32 cv_query_txtime_based_snd_disable;
+    /** Histogram of sounding duration for SU feedback type. */
+    A_UINT32 sounding_histogram_su_fb[HTT_TX_SOUNDING_DUR_SU_FB_HISTOGRAM];
+    /** Histogram of sounding duration for MU feedback type. */
+    A_UINT32 sounding_histogram_mu_fb[HTT_TX_SOUNDING_DUR_MU_FB_HISTOGRAM];
+
+    /** Total number of times NRxNC sounding has happened from the BFER. */
+    A_UINT32 sounding_nr_nc[HTT_TX_SOUNDING_MAX_NR][HTT_TX_SOUNDING_MAX_NC];
+    /** Total number of times NR of the sounding downgraded due to sounding failures. */
+    A_UINT32 nr_downgrade_reason_sounding_failures;
+    /** Total number of times NR of the sounding downgraded due to excessive PER in SU. */
+    A_UINT32 nr_downgrade_reason_excessive_per_su;
+    /** Total number of times NR of the sounding downgraded due to excessive PER in MU. */
+    A_UINT32 nr_downgrade_reason_excessive_per_mu;
+    /** Total number of times mixed NR DL MU MIMO grouping happened with forced NR downgrade. */
+    A_UINT32 nr_downgrade_forced_dl_mu_mimo_grouping;
+    /**
+     * BIT [ 3 :  0]   :- wifi_version
+     * BIT [31 :  4]   :- reserved
+     */
+    union {
+        struct {
+            A_UINT32
+                     /* wifi_version:
+                      * Holds a HTT_RX_TX_PDEV_STATS_WIFI_VERSION value.
+                      * Refer to HTT_TX_SOUNDING_STATS_WIFI_VERSION_GET
+                      * / _SET macros for accessing this bitfield.
+                      */
+                     wifi_version:  4,
+                     reserved:     28;
+        };
+        A_UINT32 wifi_version__word;
+    };
 } htt_stats_tx_sounding_stats_tlv;
 /* preserve old name alias for new name consistent with the tag name */
 typedef htt_stats_tx_sounding_stats_tlv htt_tx_sounding_stats_tlv;
