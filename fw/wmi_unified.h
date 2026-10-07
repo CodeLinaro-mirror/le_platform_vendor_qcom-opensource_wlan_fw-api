@@ -1621,6 +1621,12 @@ typedef enum {
     WMI_NAN_DISC_CANCEL_SERVICE_REQ_CMDID,
     /** WMI command to provide FW with updated NAN test config */
     WMI_NAN_TEST_CONFIG_CMDID,
+    /**
+     * Command to suspend/resume an active NAN discovery service.
+     * Equivalent of NL80211_VENDOR_SUBCMD_NAN_SUSPEND_RESUME in the cfg80211
+     * offload interface.
+     */
+    WMI_NAN_DISC_SERVICE_SUSPEND_RESUME_CMDID,
 
     /** Modem power state command */
     WMI_MODEM_POWER_STATE_CMDID = WMI_CMD_GRP_START_ID(WMI_GRP_COEX),
@@ -2792,6 +2798,12 @@ typedef enum {
      * once on disc match only.
      */
     WMI_NAN_DISC_CONTINUOUS_RANGE_RESULT_EVENTID,
+    /** Event response to NAN config command */
+    WMI_NAN_CONFIG_RSP_EVENTID,
+    /**
+     * Event response to NAN discovery service suspend resume request command
+     */
+    WMI_NAN_DISC_SERVICE_SUSPEND_RESUME_RSP_EVENTID,
 
     /* Coex Event */
     WMI_COEX_REPORT_ANTENNA_ISOLATION_EVENTID = WMI_EVT_GRP_START_ID(WMI_GRP_COEX),
@@ -32985,6 +32997,15 @@ typedef enum {
     WMI_NAN_CONF_CHANGE_SUPP_DISC_BANDS       = 0x00000100,
 } WMI_NAN_CONFIG_CHANGE_PARAM;
 
+/*
+ * GET/SET macros to set/get bitfields within
+ * nan_ic_mode_info of wmi_nan_config_cmd_fixed_param.
+ */
+#define WMI_NAN_CONF_IC_MODE_INFO_GET_ENABLE(flags)  WMI_GET_BITS(flags, 0, 1)
+#define WMI_NAN_CONF_IC_MODE_INFO_SET_ENABLE(flags, value) WMI_SET_BITS(flags, 0, 1, value)
+#define WMI_NAN_CONF_IC_MODE_INFO_GET_CHAN_FREQ(flags)  WMI_GET_BITS(flags, 1, 16)
+#define WMI_NAN_CONF_IC_MODE_INFO_SET_CHAN_FREQ(flags, value) WMI_SET_BITS(flags, 1, 16, value)
+
 typedef struct {
     A_UINT32 tlv_header; /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_nan_config_cmd_fixed_param */
     A_UINT32 vdev_id; /* Virtual device ID used for NAN operations */
@@ -32998,6 +33019,11 @@ typedef struct {
      * in the TLV nan_availability_attributes_data[]
      */
     A_UINT32 nan_availability_attributes_len;
+    /* nan_ic_mode_info:
+     * NAN IC (instant communication) mode configuration related info.
+     * Use WMI_NAN_CONF_IC_MODE_INFO_GET/SET macros for accessing.
+     */
+    A_UINT32 nan_ic_mode_info;
 /*
  * TLVs following this structure:
  *     wmi_nan_ctrl_config_param nan_ctrl_config[];
@@ -33010,6 +33036,24 @@ typedef struct {
  *         expected byte order is maintained.
  */
 } wmi_nan_config_cmd_fixed_param;
+
+typedef enum {
+    WMI_NAN_SUSPEND_RESUME_ACTION_SUSPEND,
+    WMI_NAN_SUSPEND_RESUME_ACTION_RESUME,
+} WMI_NAN_SUSPEND_RESUME_ACTION;
+
+typedef struct {
+    A_UINT32 tlv_header; /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_nan_disc_service_suspend_resume_cmd_fixed_param */
+    /** Unique id identifying the NMI VDEV */
+    A_UINT32 vdev_id;
+    /* action:
+     * Service suspend or resume or any other action,
+     * possible values are enum WMI_NAN_SUSPEND_RESUME_ACTION.
+     */
+    A_UINT32 action;
+    /* FW/device-assigned service instance ID (1-255). */
+    A_UINT32 instance_id;
+} wmi_nan_disc_service_suspend_resume_cmd_fixed_param;
 
 typedef struct {
     A_UINT32 tlv_header; /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_nan_disable_cmd_fixed_param */
@@ -33607,6 +33651,13 @@ typedef struct {
     A_UINT32 mac_id; /* MAC ID associated with NAN primary discovery channel */
 } wmi_nan_enable_rsp_event_fixed_param;
 
+typedef struct {
+    /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_nan_config_rsp_event_fixed_param */
+    A_UINT32 tlv_header;
+    A_UINT32 vdev_id; /* Virtual device ID used for NAN operations */
+    A_UINT32 status; /* Status code; 0 indicates NAN config apply is success */
+} wmi_nan_config_rsp_event_fixed_param;
+
 /**
  * WMI event response to WMI_NAN_DISC_SERVICE_REQ_CMDID.
  * Sent by FW for each Publish / Subscribe / Follow-up function registration.
@@ -33642,6 +33693,19 @@ typedef struct {
     /** Status code returned by FW: 0 = success, non-zero = failure */
     A_UINT32 status;
 } wmi_nan_disc_service_rsp_event_fixed_param;
+
+/**
+ * WMI event response to WMI_NAN_DISC_SERVICE_REQ_CMDID.
+ * Sent by FW for each Publish / Subscribe / Follow-up function registration.
+ */
+typedef struct {
+    /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_nan_disc_service_rsp_event_fixed_param */
+    A_UINT32 tlv_header;
+    /** Unique id identifying the NMI VDEV */
+    A_UINT32 vdev_id;
+    /** Status code returned by FW: 0 = success, non-zero = failure */
+    A_UINT32 status;
+} wmi_nan_disc_service_suspend_resume_rsp_event_fixed_param;
 
 /**
  * WMI command to cancel an active NAN discovery service request.
@@ -33998,6 +34062,15 @@ typedef enum {
         WMI_GET_BITS(word32, 16, 8)
 #define WMI_DEVICE_CAPS_SET_NDP_SUPPORTED_BAND(word32, val) \
         WMI_SET_BITS(word32, 16, 8, val)
+#define WMI_DEVICE_CAPS_GET_IC_MODE_SUPPORT(word32) \
+        WMI_GET_BITS(word32, 24, 1)
+#define WMI_DEVICE_CAPS_SET_IC_MODE_SUPPORT(word32, val) \
+        WMI_SET_BITS(word32, 24, 1, val)
+#define WMI_DEVICE_CAPS_GET_SERVICE_SUSPEND_SUPPORT(word32) \
+        WMI_GET_BITS(word32, 25, 1)
+#define WMI_DEVICE_CAPS_SET_SERVICE_SUSPEND_SUPPORT(word32, val) \
+        WMI_SET_BITS(word32, 25, 1, val)
+
 #define WMI_DEVICE_CAPS_GET_MAX_CHAN_SWITCH_TIME(word32) \
         WMI_GET_BITS(word32, 0, 16)
 #define WMI_DEVICE_CAPS_SET_MAX_CHAN_SWITCH_TIME(word32, val) \
@@ -34028,7 +34101,9 @@ typedef struct {
                      max_ndi_interfaces:3, /* Max number of NDI interfaces */
                      ndp_supported_band:8, /* Supported bands for NDP
                                             * (see WMI_NDP_BAND_CAP) */
-                     reserved:8;           /* Reserved bits */
+                     ic_mode_support:1,
+                     service_suspend_support:1, /* Service suspend support. */
+                     reserved:6;           /* Reserved bits */
         };
     };
     union {
@@ -44823,6 +44898,7 @@ static INLINE A_UINT8 *wmi_id_to_name(A_UINT32 wmi_command)
         WMI_RETURN_STRING(WMI_ROAM_UPDATE_AUTH_STATUS_CMDID);
         WMI_RETURN_STRING(WMI_PDEV_DOWNLOAD_RTT_BLOB_CMDID);
         WMI_RETURN_STRING(WMI_RSSI_ADAPTIVE_BREACH_MONITOR_CONFIG_CMDID);
+        WMI_RETURN_STRING(WMI_NAN_DISC_SERVICE_SUSPEND_RESUME_CMDID);
     }
 
     return (A_UINT8 *) "Invalid WMI cmd";
