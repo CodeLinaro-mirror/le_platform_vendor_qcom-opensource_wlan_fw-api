@@ -49163,10 +49163,40 @@ typedef enum {
  * useful macros defined for manual_conf field in
  * wmi_roam_smd_config_cmd_fixed_param
  */
-#define WMI_SMD_CONFIG_MANUAL_CONF_GET_EXECUTION_VIA_NEW_AP(conf) \
+#define WMI_SMD_CONFIG_MANUAL_CONF_GET_EXECUTION_VIA_TARGET_AP(conf) \
     WMI_GET_BITS(conf, 0, 1)
-#define WMI_SMD_CONFIG_MANUAL_CONF_SET_EXECUTION_VIA_NEW_AP(conf, val) \
+#define WMI_SMD_CONFIG_MANUAL_CONF_SET_EXECUTION_VIA_TARGET_AP(conf, val) \
     WMI_SET_BITS(conf, 0, 1, val)
+/* retain legacy names as aliases for new names */
+#define WMI_SMD_CONFIG_MANUAL_CONF_GET_EXECUTION_VIA_NEW_AP \
+    WMI_SMD_CONFIG_MANUAL_CONF_GET_EXECUTION_VIA_TARGET_AP
+#define WMI_SMD_CONFIG_MANUAL_CONF_SET_EXECUTION_VIA_NEW_AP \
+    WMI_SMD_CONFIG_MANUAL_CONF_SET_EXECUTION_VIA_TARGET_AP
+
+#define WMI_SMD_CONFIG_MANUAL_CONF_GET_ENABLE_TUNNEL_PROBING(conf) \
+    WMI_GET_BITS(conf, 1, 1)
+#define WMI_SMD_CONFIG_MANUAL_CONF_SET_ENABLE_TUNNEL_PROBING(conf, val) \
+    WMI_SET_BITS(conf, 1, 1, val)
+
+#define WMI_SMD_CONFIG_MANUAL_CONF_GET_UL_SN_NO_TRANSFER(conf) \
+    WMI_GET_BITS(conf, 2, 1)
+#define WMI_SMD_CONFIG_MANUAL_CONF_SET_UL_SN_NO_TRANSFER(conf, val) \
+    WMI_SET_BITS(conf, 2, 1, val)
+
+#define WMI_SMD_CONFIG_MANUAL_CONF_GET_DL_SN_NO_TRANSFER(conf) \
+    WMI_GET_BITS(conf, 3, 1)
+#define WMI_SMD_CONFIG_MANUAL_CONF_SET_DL_SN_NO_TRANSFER(conf, val) \
+    WMI_SET_BITS(conf, 3, 1, val)
+
+#define WMI_SMD_CONFIG_MANUAL_CONF_GET_NOTIFY_SOURCE_AP(conf) \
+    WMI_GET_BITS(conf, 4, 1)
+#define WMI_SMD_CONFIG_MANUAL_CONF_SET_NOTIFY_SOURCE_AP(conf, val) \
+    WMI_SET_BITS(conf, 4, 1, val)
+
+#define WMI_SMD_CONFIG_MANUAL_CONF_GET_SEND_BTM_REQUEST(conf) \
+    WMI_GET_BITS(conf, 5, 1)
+#define WMI_SMD_CONFIG_MANUAL_CONF_SET_SEND_BTM_REQUEST(conf, val) \
+    WMI_SET_BITS(conf, 5, 1, val)
 
 typedef struct {
     A_UINT32 tlv_header; /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_roam_smd_config_cmd_fixed_param */
@@ -49187,7 +49217,13 @@ typedef struct {
     A_UINT32 flags;
     /* manual_conf:
      * Valid only when prefer_mode is WMI_ROAM_MANUAL_MODE
-     * BIT 0 - SMD transition execution via new AP if set.
+     * refer WMI_SMD_CONFIG_MANUAL_CONF_GET and _SET macros
+     * BIT 0 - SMD transition execution via target AP if set.
+     * BIT 1 - Tunnel probing if set.
+     * BIT 2 - UL SN - NO transfer if set, UL SN transfer if clear.
+     * BIT 3 - DL SN - NO transfer if set, DL SN transfer if clear.
+     * BIT 4 - DL drain if clear; notify source AP if set.
+     * BIT 5 - Send BTM request to AP if set.
      */
     A_UINT32 manual_conf;
 } wmi_roam_smd_config_cmd_fixed_param;
