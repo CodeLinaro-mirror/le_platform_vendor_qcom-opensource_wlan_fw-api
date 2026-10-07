@@ -26266,12 +26266,7 @@ typedef struct {
 #define WMI_ROAM_OFFLOAD_FLAG_SAE_SAME_PMKID 2      /* Use same PMKID for WPA3 SAE roaming */
 /* host supplicant OKC supported; FW skips PMK match-delete */
 #define WMI_ROAM_OFFLOAD_FLAG_USER_OKC_CACHE_SUPPORT 3
-/*
- * HOST supplicant supports FT-IM roaming when
- * there is an auth failure for self roaming FT-PSK case.
- */
-#define WMI_ROAM_OFFLOAD_FLAG_FT_IM_AUTH_NOTIF_SUPPORT 4
-/* from bit 5 to bit 31 are reserved */
+/* from bit 4 to bit 31 are reserved */
 
 #define WMI_SET_ROAM_OFFLOAD_OKC_ENABLED(flag) do { \
         (flag) |=  (1 << WMI_ROAM_OFFLOAD_FLAG_OKC_ENABLED);      \
@@ -26306,14 +26301,6 @@ typedef struct {
 #define WMI_GET_ROAM_OFFLOAD_USER_OKC_CACHE_SUPPORT(flag) \
     ((flag) & (1 << WMI_ROAM_OFFLOAD_FLAG_USER_OKC_CACHE_SUPPORT))
 
-#define WMI_SET_ROAM_OFFLOAD_FT_IM_AUTH_NOTIF_SUPPORT(flag) \
-    do { \
-        (flag) |= (1 << WMI_ROAM_OFFLOAD_FLAG_FT_IM_AUTH_NOTIF_SUPPORT); \
-    } while (0)
-
-#define WMI_GET_ROAM_OFFLOAD_FT_IM_AUTH_NOTIF_SUPPORT(flag) \
-    ((flag) & (1 << WMI_ROAM_OFFLOAD_FLAG_FT_IM_AUTH_NOTIF_SUPPORT))
-
 /* This TLV will be filled only in case of wpa-psk/wpa2-psk/wpa3 */
 typedef struct {
     A_UINT32 tlv_header;     /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_roam_11i_offload_fixed_param */
@@ -26323,6 +26310,27 @@ typedef struct {
     A_UINT32 pmk_ext_len; /** the length of extended pmk. in normal case it should be 0, but for suiteB, it should be 16*/
     A_UINT32 pmk_ext[ROAM_OFFLOAD_PMK_BYTES>>2]; /* pmk ext offload. 16 bytes for suiteB */
 } wmi_roam_11i_offload_tlv_param;
+
+/*
+ * flags for 11r offload -
+ * bit positions in wmi_roam_11r_offload_tlv_param.flags
+ */
+
+/*
+ * HOST supplicant supports FT-IM roaming when
+ * there is an auth failure for self roaming FT-PSK case.
+ */
+#define WMI_ROAM_OFFLOAD_FLAG_FT_IM_AUTH_NOTIF_SUPPORT 0
+
+/* from bit 1 to bit 31 are reserved */
+
+#define WMI_SET_ROAM_OFFLOAD_FT_IM_AUTH_NOTIF_SUPPORT(flag) \
+    do { \
+        (flag) |= (1 << WMI_ROAM_OFFLOAD_FLAG_FT_IM_AUTH_NOTIF_SUPPORT); \
+    } while (0)
+
+#define WMI_GET_ROAM_OFFLOAD_FT_IM_AUTH_NOTIF_SUPPORT(flag) \
+    ((flag) & (1 << WMI_ROAM_OFFLOAD_FLAG_FT_IM_AUTH_NOTIF_SUPPORT))
 
 /* This TLV will be  filled only in case of 11R*/
 typedef struct {
@@ -26350,6 +26358,7 @@ typedef struct {
      *     1 - To enable FT-over-DS
      */
     A_UINT32 ft_over_ds_enable;
+    A_UINT32 flags; /** flags : see WMI_ROAM_OFFLOAD_FLAG_ for 11r above */
 } wmi_roam_11r_offload_tlv_param;
 
 /* This TLV will be filled only in case of ESE */
