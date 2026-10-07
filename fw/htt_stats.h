@@ -13088,9 +13088,9 @@ typedef struct {
     /* rx_pkt_cnt -
      * Received EOP (end-of-packet) count per packet type;
      * [0] = 11a; [1] = 11b; [2] = 11n; [3] = 11ac; [4] = 11ax;
-     * [5] = GF; [6] = EHT; [7] = WUR; [8] = AZ
+     * [5] = GF; [6] = EHT; [7] = WUR; [8] = AZ; [9] = UHR
      */
-    A_UINT32 rx_pkt_cnt[9];
+    A_UINT32 rx_pkt_cnt[10];
 } htt_stats_ani_pkt_cnt_tlv;
 
 typedef struct {
@@ -13098,9 +13098,9 @@ typedef struct {
     /* rx_pkt_crc_pass_cnt -
      * CRC pass count per packet type;
      * [0] = 11a; [1] = 11b; [2] = 11n; [3] = 11ac; [4] = 11ax;
-     * [5] = GF; [6] = EHT; [7] = WUR; [8] = AZ
+     * [5] = GF; [6] = EHT; [7] = WUR; [8] = AZ; [9] = UHR
      */
-    A_UINT32 rx_pkt_crc_pass_cnt[9];
+    A_UINT32 rx_pkt_crc_pass_cnt[10];
 } htt_stats_ani_crc_pass_tlv;
 
 typedef struct {
