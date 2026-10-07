@@ -29265,8 +29265,11 @@ typedef enum
     /* Whitelist action: AP whose OUI matches is known-good for APPM */
     WMI_VENDOR_OUI_ACTION_ENABLE_APPM = 20,
 
+    /* Leaky AP configuration when OUI matches */
+    WMI_VENDOR_OUI_ACTION_CONFIGURE_LEAKY_AP = 21,
 
-    /* Add any action before this line */
+
+    /*--- Add any action before this line ---*/
     WMI_VENDOR_OUI_ACTION_MAX_ACTION_ID,
 
 
