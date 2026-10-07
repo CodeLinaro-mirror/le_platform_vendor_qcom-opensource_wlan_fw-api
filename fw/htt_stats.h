@@ -1428,7 +1428,12 @@ typedef struct {
     /** Number of hardware reaped (Tx completed) packets in VLP mode */
     A_UINT32 hw_reaped_vlp;
     A_UINT32 avg_channel_access_latency_per_ac[HTT_NUM_AC_WMM]; /* usec units */
-    A_UINT32 seq_posted_per_tid[HTT_PDEV_STATS_MAX_DATA_TID_COUNT];
+    /** Total CTS count */
+    A_UINT32 cts_cnt;
+    /** CTS count of data PPDU's */
+    A_UINT32 cts_data_cnt;
+    /** Histogram of CTS2SELF in data ppdu's from 0 to 3 */
+    A_UINT32 cts_data_hist[4];
 } htt_stats_tx_pdev_cmn_tlv;
 /* preserve old name alias for new name consistent with the tag name */
 typedef htt_stats_tx_pdev_cmn_tlv htt_tx_pdev_stats_cmn_tlv;
