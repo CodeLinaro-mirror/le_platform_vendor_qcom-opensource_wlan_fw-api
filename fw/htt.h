@@ -289,6 +289,7 @@
  * 3.159 Add enable_sa_search and enable_da_search flags in htt_ast_info_t.
  * 3.160 Add is_txop_intent_valid and qmid fields in MPDUQ_OR_MSDUQ_INFO.
  * 3.161 Add rxdma1_status_ring fields in rx_ring_selection_cfg.
+ * 3.162 Add phy_err_mask_cont2,3 fields in htt_rx_ring_selection_cfg_t.
  */
 #define HTT_CURRENT_VERSION_MAJOR 3
 #define HTT_CURRENT_VERSION_MINOR 161
@@ -6457,6 +6458,12 @@ enum htt_srng_ring_id {
  *                    ring ID is configured as a source buffer.
  *                    Applies only to HTT_RXDMA_WBM_BUF0/1/2_RING.
  * dword30- b'0-31  - wifi8 header length configurations.
+ *
+ * dword31- b'0-31  - fp data TLV filter ix0
+ * dword32- b'0-31  - fpmo data TLV filter ix0
+ * dword33- b'0-31  - fp,fpmo data TLV filter ix1
+ * dword34- b'0-31  - phy_err_mask_cont2 (where relevant)
+ * dword35- b'0-31  - phy_err_mask_cont3 (where relevant)
  */
 PREPACK struct htt_rx_ring_selection_cfg_t {
     A_UINT32 msg_type:          8,
@@ -6564,6 +6571,8 @@ PREPACK struct htt_rx_ring_selection_cfg_t {
         rxdma1_status_ring_fp_data_mpdu_tlv_filter_in_control_ix1   : 6,
         rxdma1_status_ring_fpmo_data_mpdu_tlv_filter_in_control_ix1 : 6,
         data_mpdu_tlv_filter_in_control_reserved : 20;
+    A_UINT32 phy_err_mask_cont2;
+    A_UINT32 phy_err_mask_cont3;
 } POSTPACK;
 
 /**
@@ -7068,6 +7077,28 @@ enum htt_reg_write_selection {
             do { \
                 HTT_CHECK_SET_VAL(HTT_RX_RING_SELECTION_CFG_PHY_ERR_MASK_CONT, _val); \
                 ((_var) |= ((_val) << HTT_RX_RING_SELECTION_CFG_PHY_ERR_MASK_CONT_S)); \
+            } while (0)
+
+#define HTT_RX_RING_SELECTION_CFG_PHY_ERR_MASK_CONT2_M         0xffffffff
+#define HTT_RX_RING_SELECTION_CFG_PHY_ERR_MASK_CONT2_S         0
+#define HTT_RX_RING_SELECTION_CFG_PHY_ERR_MASK_CONT2_GET(_var) \
+            (((_var) & HTT_RX_RING_SELECTION_CFG_PHY_ERR_MASK_CONT2_M) >> \
+                    HTT_RX_RING_SELECTION_CFG_PHY_ERR_MASK_CONT2_S)
+#define HTT_RX_RING_SELECTION_CFG_PHY_ERR_MASK_CONT2_SET(_var, _val) \
+            do { \
+                HTT_CHECK_SET_VAL(HTT_RX_RING_SELECTION_CFG_PHY_ERR_MASK_CONT2, _val); \
+                ((_var) |= ((_val) << HTT_RX_RING_SELECTION_CFG_PHY_ERR_MASK_CONT2_S)); \
+            } while (0)
+
+#define HTT_RX_RING_SELECTION_CFG_PHY_ERR_MASK_CONT3_M         0xffffffff
+#define HTT_RX_RING_SELECTION_CFG_PHY_ERR_MASK_CONT3_S         0
+#define HTT_RX_RING_SELECTION_CFG_PHY_ERR_MASK_CONT3_GET(_var) \
+            (((_var) & HTT_RX_RING_SELECTION_CFG_PHY_ERR_MASK_CONT3_M) >> \
+                    HTT_RX_RING_SELECTION_CFG_PHY_ERR_MASK_CONT3_S)
+#define HTT_RX_RING_SELECTION_CFG_PHY_ERR_MASK_CONT3_SET(_var, _val) \
+            do { \
+                HTT_CHECK_SET_VAL(HTT_RX_RING_SELECTION_CFG_PHY_ERR_MASK_CONT3, _val); \
+                ((_var) |= ((_val) << HTT_RX_RING_SELECTION_CFG_PHY_ERR_MASK_CONT3_S)); \
             } while (0)
 
 #define HTT_RX_RING_SELECTION_CFG_RX_MPDU_START_WORD_MASK_M 0x0000FFFF
