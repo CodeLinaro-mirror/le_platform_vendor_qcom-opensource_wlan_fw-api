@@ -5608,8 +5608,13 @@ typedef struct {
      *     Refer to the below definitions of
      *     WMI_RSRC_CFG_HOST_SERVICE_FLAG_PASSTHRU_RX_REORDER_GET and _SET
      *     macros.
+     *  Bit 29
+     *     This bit will be set by host to inform FW that the host supports
+     *     scan-radio operation on non-country channels.
+     *     Refer to the below definitions of WMI_RSRC_CFG_HOST_SERVICE_FLAG
+     *     SCAN_RADIO_NON_COUNTRY_CHANNEL_SUPPORT_GET and _SET macros.
      *
-     *  Bits 31:29 - Reserved
+     *  Bits 31:30 - Reserved
      */
     A_UINT32 host_service_flags;
 
@@ -6303,6 +6308,14 @@ typedef struct {
     WMI_GET_BITS(host_service_flags, 28, 1)
 #define WMI_RSRC_CFG_HOST_SERVICE_FLAG_PASSTHRU_RX_REORDER_SET(host_service_flags, val) \
     WMI_SET_BITS(host_service_flags, 28, 1, val)
+
+/*
+ * Bit 29: Host supports scan-radio operation on non-country channels.
+ */
+#define WMI_RSRC_CFG_HOST_SERVICE_FLAG_SCAN_RADIO_NON_COUNTRY_CHANNEL_SUPPORT_GET(host_service_flags) \
+    WMI_GET_BITS(host_service_flags, 29, 1)
+#define WMI_RSRC_CFG_HOST_SERVICE_FLAG_SCAN_RADIO_NON_COUNTRY_CHANNEL_SUPPORT_SET(host_service_flags, val) \
+    WMI_SET_BITS(host_service_flags, 29, 1, val)
 
 
 #define WMI_RSRC_CFG_CARRIER_CFG_CHARTER_ENABLE_GET(carrier_config) \
@@ -43683,9 +43696,9 @@ typedef struct {
  * The DFS feature is disabled on this scan radio, since there will not be
  * much TX traffic.
  * The Host has to disable CAC timer because DFS feature not supported here.
- * In order to know about the scan radio RDP, DFS disabled case and
- * SCAN BLANKING support, the target has to send this information to Host
- * per pdev via WMI_SERVICE_READY_EXT2_EVENT.
+ * In order to know about the scan radio RDP, DFS disabled case,
+ * SCAN BLANKING support, and non-country channel support, the target has
+ * to send this information to Host per pdev via WMI_SERVICE_READY_EXT2_EVENT.
  * The target is notified of the special scan VAP by the flags variable
  * in the WMI_CREATE_CMD.
  */
@@ -43703,7 +43716,12 @@ typedef struct {
      *     1 - SCAN RADIO blanking supported
      *     0 - SCAN RADIO blanking not supported
      *     Refer to WMI_SCAN_RADIO_CAP_BLANKING_SUPPORT_SET, GET macros
-     * [3:31] reserved
+     * Bit 3:
+     *     1 - SCAN RADIO supports non-country channels
+     *     0 - SCAN RADIO does not support non-country channels
+     *     Refer to WMI_SCAN_RADIO_CAP_NON_COUNTRY_CHANNEL_SUPPORT_SET,
+     *     GET macros
+     * [4:31] reserved
      */
     A_UINT32 flags;
 } WMI_SCAN_RADIO_CAPABILITIES_EXT2;
@@ -43716,6 +43734,12 @@ typedef struct {
 
 #define WMI_SCAN_RADIO_CAP_BLANKING_SUPPORT_GET(flag)        WMI_GET_BITS(flag, 2, 1)
 #define WMI_SCAN_RADIO_CAP_BLANKING_SUPPORT_SET(flag, val)   WMI_SET_BITS(flag, 2, 1, val)
+
+#define WMI_SCAN_RADIO_CAP_NON_COUNTRY_CHANNEL_SUPPORT_GET(flag) \
+    WMI_GET_BITS(flag, 3, 1)
+#define WMI_SCAN_RADIO_CAP_NON_COUNTRY_CHANNEL_SUPPORT_SET(flag, val) \
+    WMI_SET_BITS(flag, 3, 1, val)
+
 
 typedef struct {
     A_UINT32 tlv_header; /* TLV tag and len; tag equals WMITLV_TAG_STRUC_WMI_SOC_HAL_REG_CAPABILITIES */
