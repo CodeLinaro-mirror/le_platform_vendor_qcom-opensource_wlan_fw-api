@@ -58609,12 +58609,41 @@ typedef struct {
  * Context for halPhy bucket groups
  * (ID 5000–9999)
  */
+
+/*
+ * Context for halPhy Cal bucket group
+ * (ID 6000–6999)
+ */
 typedef struct {
     A_UINT32 phy_err_code; /* Hardware PHY error code at fault time */
     A_UINT32 chain_mask;   /* Active RX/TX chain mask at fault time */
     A_UINT32 cal_step;     /* Calibration step index; 0 if not applicable */
     A_UINT32 hw_status;    /* Raw hardware status register snapshot */
 } wmi_anomaly_halphy_ctx_t;
+
+/*
+ * Context for halPhy Tx bucket group
+ * (ID 8000–8999)
+ */
+typedef struct {
+    /* TPC anomaly ctxt */
+    struct {
+          /* Worst per-packet TPC error (dB) this window */
+          A_UINT32 tpc_max_error;
+
+          /* Longest run of bad packets this window */
+          A_UINT32 tpc_max_consecutive_errors;
+
+          /* Long-term TPC error trend (dB) */
+          A_UINT32 tpc_ema;
+
+          /* TPC_CLPC verdict */
+          A_UINT32 tpc_verdict;
+
+          /* % of packets in this window exceeding the threshold */
+          A_UINT32 tpc_anomaly_rate;
+    } tpc_ctx;
+} wmi_anomaly_halphy_tx_ctx_t;
 
 /*
  * Context for uCode bucket groups
@@ -58639,11 +58668,12 @@ typedef struct {
     A_UINT32 related_cmd_id; /* WMI_CMD_ID (0 if N/A) */
     A_UINT32 reserved[2];    /* for future use when needed */
     union {
-        wmi_anomaly_vdev_ctx_t   vdev;    /* ID 0000–0999 */
-        wmi_anomaly_peer_ctx_t   peer;    /* ID 1000–1999 */
-        wmi_anomaly_beacon_ctx_t beacon;  /* ID 2000–2999 */
-        wmi_anomaly_halphy_ctx_t halphy;  /* ID 5000–9999 */
-        wmi_anomaly_ucode_ctx_t  ucode;   /* ID 10000–14999 */
+        wmi_anomaly_vdev_ctx_t      vdev;     /* ID 0000–0999 */
+        wmi_anomaly_peer_ctx_t      peer;     /* ID 1000–1999 */
+        wmi_anomaly_beacon_ctx_t    beacon;   /* ID 2000–2999 */
+        wmi_anomaly_halphy_ctx_t    halphy;   /* ID 6000–6999 */
+        wmi_anomaly_halphy_tx_ctx_t phyrf_tx; /* ID 8000-8999 */
+        wmi_anomaly_ucode_ctx_t     ucode;    /* ID 10000–14999 */
     } ctx;
     /* NOTE:
      * No new fields can be added here - this restriction allows new fields
