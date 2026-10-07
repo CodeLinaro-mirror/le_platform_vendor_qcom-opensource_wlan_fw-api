@@ -6563,7 +6563,8 @@ PREPACK struct htt_rx_ring_selection_cfg_t {
              rxmon_md_mgmt_hdrlen      : 2,
              rxmon_enable_hdr_per_ppdu : 1,
              rxmon_fp_fpmo_data_mpdu_filter_in_enable: 1,
-             rxmon_rsvd                : 6;
+             rxmon_peer_type_filter_en : 1,
+             rxmon_rsvd                : 5;
 
     A_UINT32 rxdma1_status_ring_fp_data_mpdu_tlv_filter_in_control_ix0;
     A_UINT32 rxdma1_status_ring_fpmo_data_mpdu_tlv_filter_in_control_ix0;
@@ -7445,6 +7446,23 @@ enum htt_reg_write_selection {
         HTT_CHECK_SET_VAL(HTT_RX_RING_SELECTION_CFG_RXMON_FP_FPMO_DATA_MPDU_FILTER_IN_ENABLE, _val); \
         ((_var) |= (((_val) & 0x1) << HTT_RX_RING_SELECTION_CFG_RXMON_FP_FPMO_DATA_MPDU_FILTER_IN_ENABLE_S)); \
     } while (0)
+
+/* Bit 26 - rxmon_peer_type_filter_en */
+
+#define HTT_RX_RING_SELECTION_CFG_RXMON_PEER_TYPE_FILTER_EN_M  0x04000000
+#define HTT_RX_RING_SELECTION_CFG_RXMON_PEER_TYPE_FILTER_EN_S  26
+
+#define HTT_RX_RING_SELECTION_CFG_RXMON_PEER_TYPE_FILTER_EN_GET(_var) \
+    (((_var) & HTT_RX_RING_SELECTION_CFG_RXMON_PEER_TYPE_FILTER_EN_M) >> \
+     HTT_RX_RING_SELECTION_CFG_RXMON_PEER_TYPE_FILTER_EN_S)
+
+#define HTT_RX_RING_SELECTION_CFG_RXMON_PEER_TYPE_FILTER_EN_SET(_var, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_RX_RING_SELECTION_CFG_RXMON_PEER_TYPE_FILTER_EN, _val); \
+        ((_var) |= (((_val) & 0x1) << \
+                    HTT_RX_RING_SELECTION_CFG_RXMON_PEER_TYPE_FILTER_EN_S)); \
+    } while (0)
+
 
 #define RXDMA1_STATUS_RING_FP_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX0_M  0xFFFFFFFF
 #define RXDMA1_STATUS_RING_FP_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX0_S  0
