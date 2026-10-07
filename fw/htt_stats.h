@@ -15532,6 +15532,12 @@ typedef struct {
     A_UINT32 abort_reason_comb_second_cmd[HTT_STATS_COMB_ABORT_SECOND_CMD_MAX];
     /** Percentage of window used by OBSS Rx */
     A_UINT32 obss_rx_airtime;
+    A_UINT32 mixed_sta_bw_dl_ofdma_txmode_cnt;
+    A_UINT32 dso_dl_ofdma_txmode_cnt;
+    A_UINT32 dso_pro_dl_ofdma_txmode_cnt;
+    A_UINT32 mixed_sta_bw_ul_ofdma_txmode_cnt;
+    A_UINT32 dso_ul_ofdma_txmode_cnt;
+    A_UINT32 dso_pro_ul_ofdma_txmode_cnt;
 } htt_stats_pdev_sched_algo_ofdma_stats_tlv;
 /* preserve old name alias for new name consistent with the tag name */
 typedef htt_stats_pdev_sched_algo_ofdma_stats_tlv
