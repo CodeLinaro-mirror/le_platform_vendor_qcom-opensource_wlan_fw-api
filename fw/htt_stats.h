@@ -10120,6 +10120,19 @@ typedef struct {
 
 #define HTT_TX_TXBF_RATE_STATS_NUM_REDUCED_CHAN_TYPES 2/* 0: Half, 1: Quarter */
 
+#define HTT_TX_PDEV_RATE_TXBF_STATS_WIFI_VERSION_M 0x0000000f
+#define HTT_TX_PDEV_RATE_TXBF_STATS_WIFI_VERSION_S 0
+
+#define HTT_TX_PDEV_RATE_TXBF_STATS_WIFI_VERSION_GET(_var) \
+    (((_var) & HTT_TX_PDEV_RATE_TXBF_STATS_WIFI_VERSION_M) >> \
+     HTT_TX_PDEV_RATE_TXBF_STATS_WIFI_VERSION_S)
+
+#define HTT_TX_PDEV_RATE_TXBF_STATS_WIFI_VERSION_SET(_var, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_TX_PDEV_RATE_TXBF_STATS_WIFI_VERSION, _val); \
+        ((_var) |= ((_val) << HTT_TX_PDEV_RATE_TXBF_STATS_WIFI_VERSION_S)); \
+    } while (0)
+
 typedef struct {
     htt_tlv_hdr_t tlv_hdr;
     /** SU TxBF TX MCS stats */
@@ -10157,6 +10170,25 @@ typedef struct {
     A_UINT32 txbf_flag_not_set_disable_ul_dl_ofdma;
     A_UINT32 txbf_flag_not_set_mcs_threshold_value;
     A_UINT32 txbf_flag_not_set_final_status;
+    /* Stats for iMCS 1.1, 3.1, 4.1, 7.1 */
+    A_UINT32 tx_su_txbf_mcs_ext_3[HTT_TX_PDEV_STATS_NUM_EXTRA3_MCS_COUNTERS];
+    /**
+     * BIT [ 3 :  0]   :- wifi_version
+     * BIT [31 :  4]   :- reserved
+     */
+    union {
+        struct {
+            A_UINT32
+                     /* wifi_version:
+                      * Holds a HTT_RX_TX_PDEV_STATS_WIFI_VERSION value.
+                      * Refer to HTT_TX_PDEV_RATE_TXBF_STATS_WIFI_VERSION_GET
+                      * / _SET macros for accessing this bitfield.
+                      */
+                     wifi_version:  4,
+                     reserved:     28;
+        };
+        A_UINT32 wifi_version__word;
+    };
 } htt_stats_pdev_tx_rate_txbf_stats_tlv;
 /* preserve old name alias for new name consistent with the tag name */
 typedef htt_stats_pdev_tx_rate_txbf_stats_tlv htt_tx_pdev_txbf_rate_stats_tlv;
