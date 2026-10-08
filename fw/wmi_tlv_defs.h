@@ -1678,6 +1678,9 @@ typedef enum {
     WMITLV_TAG_STRUC_wmi_rssi_adaptive_breach_monitor_config_fixed_param,
     WMITLV_TAG_STRUC_wmi_rssi_adaptive_breach_event_fixed_param,
     WMITLV_TAG_STRUC_wmi_mapc_cotdma_e2e_config,
+    WMITLV_TAG_STRUC_wmi_nan_config_rsp_event_fixed_param,
+    WMITLV_TAG_STRUC_wmi_nan_disc_service_suspend_resume_cmd_fixed_param,
+    WMITLV_TAG_STRUC_wmi_nan_disc_service_suspend_resume_rsp_event_fixed_param,
 } WMITLV_TAG_ID;
 /*
  * IMPORTANT: Please add _ALL_ WMI Commands Here.
@@ -2302,6 +2305,7 @@ typedef enum {
     OP(WMI_PDEV_DOWNLOAD_RTT_BLOB_CMDID) \
     OP(WMI_ROAM_UPDATE_AUTH_STATUS_CMDID) \
     OP(WMI_RSSI_ADAPTIVE_BREACH_MONITOR_CONFIG_CMDID) \
+    OP(WMI_NAN_DISC_SERVICE_SUSPEND_RESUME_CMDID) \
     /* add new CMD_LIST elements above this line */
 
 
@@ -2686,6 +2690,8 @@ typedef enum {
     OP(WMI_PDEV_GET_CURRENT_TX_POWER_EVENTID) \
     OP(WMI_NAN_DISC_CONTINUOUS_RANGE_RESULT_EVENTID) \
     OP(WMI_RSSI_ADAPTIVE_BREACH_EVENTID) \
+    OP(WMI_NAN_CONFIG_RSP_EVENTID) \
+    OP(WMI_NAN_DISC_SERVICE_SUSPEND_RESUME_RSP_EVENTID) \
     /* add new EVT_LIST elements above this line */
 
 
@@ -4556,6 +4562,11 @@ WMITLV_CREATE_PARAM_STRUC(WMI_NAN_ENABLE_CMDID);
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_nan_disc_band_config_param, nan_disc_band_config, WMITLV_SIZE_VAR) \
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_BYTE, A_UINT8, nan_availability_attributes_data, WMITLV_SIZE_VAR)
 WMITLV_CREATE_PARAM_STRUC(WMI_NAN_CONFIG_CMDID);
+
+/* NAN Discovery Suspend Resume Command */
+#define WMITLV_TABLE_WMI_NAN_DISC_SERVICE_SUSPEND_RESUME_CMDID(id,op,buf,len) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_nan_disc_service_suspend_resume_cmd_fixed_param, wmi_nan_disc_service_suspend_resume_cmd_fixed_param, fixed_param, WMITLV_SIZE_FIX)
+WMITLV_CREATE_PARAM_STRUC(WMI_NAN_DISC_SERVICE_SUSPEND_RESUME_CMDID);
 
 /* NAN Disable Command */
 #define WMITLV_TABLE_WMI_NAN_DISABLE_CMDID(id,op,buf,len) \
@@ -7721,6 +7732,16 @@ WMITLV_CREATE_PARAM_STRUC(WMI_NAN_JOINED_CLUSTER_EVENTID);
 #define WMITLV_TABLE_WMI_NAN_ENABLE_RSP_EVENTID(id,op,buf,len) \
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_nan_enable_rsp_event_fixed_param, wmi_nan_enable_rsp_event_fixed_param, fixed_param, WMITLV_SIZE_FIX)
 WMITLV_CREATE_PARAM_STRUC(WMI_NAN_ENABLE_RSP_EVENTID);
+
+/* NAN Config Response Event */
+#define WMITLV_TABLE_WMI_NAN_CONFIG_RSP_EVENTID(id,op,buf,len) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_nan_config_rsp_event_fixed_param, wmi_nan_config_rsp_event_fixed_param, fixed_param, WMITLV_SIZE_FIX)
+WMITLV_CREATE_PARAM_STRUC(WMI_NAN_CONFIG_RSP_EVENTID);
+
+/* NAN Discovery Service Suspend Resume Response Event */
+#define WMITLV_TABLE_WMI_NAN_DISC_SERVICE_SUSPEND_RESUME_RSP_EVENTID(id,op,buf,len) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_nan_disc_service_suspend_resume_rsp_event_fixed_param, wmi_nan_disc_service_suspend_resume_rsp_event_fixed_param, fixed_param, WMITLV_SIZE_FIX)
+WMITLV_CREATE_PARAM_STRUC(WMI_NAN_DISC_SERVICE_SUSPEND_RESUME_RSP_EVENTID);
 
 /** NAN Discovery Service Response Event
  *

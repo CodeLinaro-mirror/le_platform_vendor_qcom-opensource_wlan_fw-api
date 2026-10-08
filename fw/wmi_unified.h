@@ -1621,6 +1621,12 @@ typedef enum {
     WMI_NAN_DISC_CANCEL_SERVICE_REQ_CMDID,
     /** WMI command to provide FW with updated NAN test config */
     WMI_NAN_TEST_CONFIG_CMDID,
+    /**
+     * Command to suspend/resume an active NAN discovery service.
+     * Equivalent of NL80211_VENDOR_SUBCMD_NAN_SUSPEND_RESUME in the cfg80211
+     * offload interface.
+     */
+    WMI_NAN_DISC_SERVICE_SUSPEND_RESUME_CMDID,
 
     /** Modem power state command */
     WMI_MODEM_POWER_STATE_CMDID = WMI_CMD_GRP_START_ID(WMI_GRP_COEX),
@@ -2792,6 +2798,12 @@ typedef enum {
      * once on disc match only.
      */
     WMI_NAN_DISC_CONTINUOUS_RANGE_RESULT_EVENTID,
+    /** Event response to NAN config command */
+    WMI_NAN_CONFIG_RSP_EVENTID,
+    /**
+     * Event response to NAN discovery service suspend resume request command
+     */
+    WMI_NAN_DISC_SERVICE_SUSPEND_RESUME_RSP_EVENTID,
 
     /* Coex Event */
     WMI_COEX_REPORT_ANTENNA_ISOLATION_EVENTID = WMI_EVT_GRP_START_ID(WMI_GRP_COEX),
@@ -5596,8 +5608,13 @@ typedef struct {
      *     Refer to the below definitions of
      *     WMI_RSRC_CFG_HOST_SERVICE_FLAG_PASSTHRU_RX_REORDER_GET and _SET
      *     macros.
+     *  Bit 29
+     *     This bit will be set by host to inform FW that the host supports
+     *     scan-radio operation on non-country channels.
+     *     Refer to the below definitions of WMI_RSRC_CFG_HOST_SERVICE_FLAG
+     *     SCAN_RADIO_NON_COUNTRY_CHANNEL_SUPPORT_GET and _SET macros.
      *
-     *  Bits 31:29 - Reserved
+     *  Bits 31:30 - Reserved
      */
     A_UINT32 host_service_flags;
 
@@ -6291,6 +6308,14 @@ typedef struct {
     WMI_GET_BITS(host_service_flags, 28, 1)
 #define WMI_RSRC_CFG_HOST_SERVICE_FLAG_PASSTHRU_RX_REORDER_SET(host_service_flags, val) \
     WMI_SET_BITS(host_service_flags, 28, 1, val)
+
+/*
+ * Bit 29: Host supports scan-radio operation on non-country channels.
+ */
+#define WMI_RSRC_CFG_HOST_SERVICE_FLAG_SCAN_RADIO_NON_COUNTRY_CHANNEL_SUPPORT_GET(host_service_flags) \
+    WMI_GET_BITS(host_service_flags, 29, 1)
+#define WMI_RSRC_CFG_HOST_SERVICE_FLAG_SCAN_RADIO_NON_COUNTRY_CHANNEL_SUPPORT_SET(host_service_flags, val) \
+    WMI_SET_BITS(host_service_flags, 29, 1, val)
 
 
 #define WMI_RSRC_CFG_CARRIER_CFG_CHARTER_ENABLE_GET(carrier_config) \
@@ -26254,12 +26279,7 @@ typedef struct {
 #define WMI_ROAM_OFFLOAD_FLAG_SAE_SAME_PMKID 2      /* Use same PMKID for WPA3 SAE roaming */
 /* host supplicant OKC supported; FW skips PMK match-delete */
 #define WMI_ROAM_OFFLOAD_FLAG_USER_OKC_CACHE_SUPPORT 3
-/*
- * HOST supplicant supports FT-IM roaming when
- * there is an auth failure for self roaming FT-PSK case.
- */
-#define WMI_ROAM_OFFLOAD_FLAG_FT_IM_AUTH_NOTIF_SUPPORT 4
-/* from bit 5 to bit 31 are reserved */
+/* from bit 4 to bit 31 are reserved */
 
 #define WMI_SET_ROAM_OFFLOAD_OKC_ENABLED(flag) do { \
         (flag) |=  (1 << WMI_ROAM_OFFLOAD_FLAG_OKC_ENABLED);      \
@@ -26294,14 +26314,6 @@ typedef struct {
 #define WMI_GET_ROAM_OFFLOAD_USER_OKC_CACHE_SUPPORT(flag) \
     ((flag) & (1 << WMI_ROAM_OFFLOAD_FLAG_USER_OKC_CACHE_SUPPORT))
 
-#define WMI_SET_ROAM_OFFLOAD_FT_IM_AUTH_NOTIF_SUPPORT(flag) \
-    do { \
-        (flag) |= (1 << WMI_ROAM_OFFLOAD_FLAG_FT_IM_AUTH_NOTIF_SUPPORT); \
-    } while (0)
-
-#define WMI_GET_ROAM_OFFLOAD_FT_IM_AUTH_NOTIF_SUPPORT(flag) \
-    ((flag) & (1 << WMI_ROAM_OFFLOAD_FLAG_FT_IM_AUTH_NOTIF_SUPPORT))
-
 /* This TLV will be filled only in case of wpa-psk/wpa2-psk/wpa3 */
 typedef struct {
     A_UINT32 tlv_header;     /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_roam_11i_offload_fixed_param */
@@ -26311,6 +26323,27 @@ typedef struct {
     A_UINT32 pmk_ext_len; /** the length of extended pmk. in normal case it should be 0, but for suiteB, it should be 16*/
     A_UINT32 pmk_ext[ROAM_OFFLOAD_PMK_BYTES>>2]; /* pmk ext offload. 16 bytes for suiteB */
 } wmi_roam_11i_offload_tlv_param;
+
+/*
+ * flags for 11r offload -
+ * bit positions in wmi_roam_11r_offload_tlv_param.flags
+ */
+
+/*
+ * HOST supplicant supports FT-IM roaming when
+ * there is an auth failure for self roaming FT-PSK case.
+ */
+#define WMI_ROAM_OFFLOAD_FLAG_FT_IM_AUTH_NOTIF_SUPPORT 0
+
+/* from bit 1 to bit 31 are reserved */
+
+#define WMI_SET_ROAM_OFFLOAD_FT_IM_AUTH_NOTIF_SUPPORT(flag) \
+    do { \
+        (flag) |= (1 << WMI_ROAM_OFFLOAD_FLAG_FT_IM_AUTH_NOTIF_SUPPORT); \
+    } while (0)
+
+#define WMI_GET_ROAM_OFFLOAD_FT_IM_AUTH_NOTIF_SUPPORT(flag) \
+    ((flag) & (1 << WMI_ROAM_OFFLOAD_FLAG_FT_IM_AUTH_NOTIF_SUPPORT))
 
 /* This TLV will be  filled only in case of 11R*/
 typedef struct {
@@ -26338,6 +26371,7 @@ typedef struct {
      *     1 - To enable FT-over-DS
      */
     A_UINT32 ft_over_ds_enable;
+    A_UINT32 flags; /** flags : see WMI_ROAM_OFFLOAD_FLAG_ for 11r above */
 } wmi_roam_11r_offload_tlv_param;
 
 /* This TLV will be filled only in case of ESE */
@@ -29253,8 +29287,11 @@ typedef enum
     /* Whitelist action: AP whose OUI matches is known-good for APPM */
     WMI_VENDOR_OUI_ACTION_ENABLE_APPM = 20,
 
+    /* Leaky AP configuration when OUI matches */
+    WMI_VENDOR_OUI_ACTION_CONFIGURE_LEAKY_AP = 21,
 
-    /* Add any action before this line */
+
+    /*--- Add any action before this line ---*/
     WMI_VENDOR_OUI_ACTION_MAX_ACTION_ID,
 
 
@@ -32985,6 +33022,15 @@ typedef enum {
     WMI_NAN_CONF_CHANGE_SUPP_DISC_BANDS       = 0x00000100,
 } WMI_NAN_CONFIG_CHANGE_PARAM;
 
+/*
+ * GET/SET macros to set/get bitfields within
+ * nan_ic_mode_info of wmi_nan_config_cmd_fixed_param.
+ */
+#define WMI_NAN_CONF_IC_MODE_INFO_GET_ENABLE(flags)  WMI_GET_BITS(flags, 0, 1)
+#define WMI_NAN_CONF_IC_MODE_INFO_SET_ENABLE(flags, value) WMI_SET_BITS(flags, 0, 1, value)
+#define WMI_NAN_CONF_IC_MODE_INFO_GET_CHAN_FREQ(flags)  WMI_GET_BITS(flags, 1, 16)
+#define WMI_NAN_CONF_IC_MODE_INFO_SET_CHAN_FREQ(flags, value) WMI_SET_BITS(flags, 1, 16, value)
+
 typedef struct {
     A_UINT32 tlv_header; /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_nan_config_cmd_fixed_param */
     A_UINT32 vdev_id; /* Virtual device ID used for NAN operations */
@@ -32998,6 +33044,11 @@ typedef struct {
      * in the TLV nan_availability_attributes_data[]
      */
     A_UINT32 nan_availability_attributes_len;
+    /* nan_ic_mode_info:
+     * NAN IC (instant communication) mode configuration related info.
+     * Use WMI_NAN_CONF_IC_MODE_INFO_GET/SET macros for accessing.
+     */
+    A_UINT32 nan_ic_mode_info;
 /*
  * TLVs following this structure:
  *     wmi_nan_ctrl_config_param nan_ctrl_config[];
@@ -33010,6 +33061,24 @@ typedef struct {
  *         expected byte order is maintained.
  */
 } wmi_nan_config_cmd_fixed_param;
+
+typedef enum {
+    WMI_NAN_SUSPEND_RESUME_ACTION_SUSPEND,
+    WMI_NAN_SUSPEND_RESUME_ACTION_RESUME,
+} WMI_NAN_SUSPEND_RESUME_ACTION;
+
+typedef struct {
+    A_UINT32 tlv_header; /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_nan_disc_service_suspend_resume_cmd_fixed_param */
+    /** Unique id identifying the NMI VDEV */
+    A_UINT32 vdev_id;
+    /* action:
+     * Service suspend or resume or any other action,
+     * possible values are enum WMI_NAN_SUSPEND_RESUME_ACTION.
+     */
+    A_UINT32 action;
+    /* FW/device-assigned service instance ID (1-255). */
+    A_UINT32 instance_id;
+} wmi_nan_disc_service_suspend_resume_cmd_fixed_param;
 
 typedef struct {
     A_UINT32 tlv_header; /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_nan_disable_cmd_fixed_param */
@@ -33607,6 +33676,13 @@ typedef struct {
     A_UINT32 mac_id; /* MAC ID associated with NAN primary discovery channel */
 } wmi_nan_enable_rsp_event_fixed_param;
 
+typedef struct {
+    /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_nan_config_rsp_event_fixed_param */
+    A_UINT32 tlv_header;
+    A_UINT32 vdev_id; /* Virtual device ID used for NAN operations */
+    A_UINT32 status; /* Status code; 0 indicates NAN config apply is success */
+} wmi_nan_config_rsp_event_fixed_param;
+
 /**
  * WMI event response to WMI_NAN_DISC_SERVICE_REQ_CMDID.
  * Sent by FW for each Publish / Subscribe / Follow-up function registration.
@@ -33642,6 +33718,19 @@ typedef struct {
     /** Status code returned by FW: 0 = success, non-zero = failure */
     A_UINT32 status;
 } wmi_nan_disc_service_rsp_event_fixed_param;
+
+/**
+ * WMI event response to WMI_NAN_DISC_SERVICE_REQ_CMDID.
+ * Sent by FW for each Publish / Subscribe / Follow-up function registration.
+ */
+typedef struct {
+    /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_nan_disc_service_rsp_event_fixed_param */
+    A_UINT32 tlv_header;
+    /** Unique id identifying the NMI VDEV */
+    A_UINT32 vdev_id;
+    /** Status code returned by FW: 0 = success, non-zero = failure */
+    A_UINT32 status;
+} wmi_nan_disc_service_suspend_resume_rsp_event_fixed_param;
 
 /**
  * WMI command to cancel an active NAN discovery service request.
@@ -33998,6 +34087,15 @@ typedef enum {
         WMI_GET_BITS(word32, 16, 8)
 #define WMI_DEVICE_CAPS_SET_NDP_SUPPORTED_BAND(word32, val) \
         WMI_SET_BITS(word32, 16, 8, val)
+#define WMI_DEVICE_CAPS_GET_IC_MODE_SUPPORT(word32) \
+        WMI_GET_BITS(word32, 24, 1)
+#define WMI_DEVICE_CAPS_SET_IC_MODE_SUPPORT(word32, val) \
+        WMI_SET_BITS(word32, 24, 1, val)
+#define WMI_DEVICE_CAPS_GET_SERVICE_SUSPEND_SUPPORT(word32) \
+        WMI_GET_BITS(word32, 25, 1)
+#define WMI_DEVICE_CAPS_SET_SERVICE_SUSPEND_SUPPORT(word32, val) \
+        WMI_SET_BITS(word32, 25, 1, val)
+
 #define WMI_DEVICE_CAPS_GET_MAX_CHAN_SWITCH_TIME(word32) \
         WMI_GET_BITS(word32, 0, 16)
 #define WMI_DEVICE_CAPS_SET_MAX_CHAN_SWITCH_TIME(word32, val) \
@@ -34028,7 +34126,9 @@ typedef struct {
                      max_ndi_interfaces:3, /* Max number of NDI interfaces */
                      ndp_supported_band:8, /* Supported bands for NDP
                                             * (see WMI_NDP_BAND_CAP) */
-                     reserved:8;           /* Reserved bits */
+                     ic_mode_support:1,
+                     service_suspend_support:1, /* Service suspend support. */
+                     reserved:6;           /* Reserved bits */
         };
     };
     union {
@@ -43596,9 +43696,9 @@ typedef struct {
  * The DFS feature is disabled on this scan radio, since there will not be
  * much TX traffic.
  * The Host has to disable CAC timer because DFS feature not supported here.
- * In order to know about the scan radio RDP, DFS disabled case and
- * SCAN BLANKING support, the target has to send this information to Host
- * per pdev via WMI_SERVICE_READY_EXT2_EVENT.
+ * In order to know about the scan radio RDP, DFS disabled case,
+ * SCAN BLANKING support, and non-country channel support, the target has
+ * to send this information to Host per pdev via WMI_SERVICE_READY_EXT2_EVENT.
  * The target is notified of the special scan VAP by the flags variable
  * in the WMI_CREATE_CMD.
  */
@@ -43616,7 +43716,12 @@ typedef struct {
      *     1 - SCAN RADIO blanking supported
      *     0 - SCAN RADIO blanking not supported
      *     Refer to WMI_SCAN_RADIO_CAP_BLANKING_SUPPORT_SET, GET macros
-     * [3:31] reserved
+     * Bit 3:
+     *     1 - SCAN RADIO supports non-country channels
+     *     0 - SCAN RADIO does not support non-country channels
+     *     Refer to WMI_SCAN_RADIO_CAP_NON_COUNTRY_CHANNEL_SUPPORT_SET,
+     *     GET macros
+     * [4:31] reserved
      */
     A_UINT32 flags;
 } WMI_SCAN_RADIO_CAPABILITIES_EXT2;
@@ -43629,6 +43734,12 @@ typedef struct {
 
 #define WMI_SCAN_RADIO_CAP_BLANKING_SUPPORT_GET(flag)        WMI_GET_BITS(flag, 2, 1)
 #define WMI_SCAN_RADIO_CAP_BLANKING_SUPPORT_SET(flag, val)   WMI_SET_BITS(flag, 2, 1, val)
+
+#define WMI_SCAN_RADIO_CAP_NON_COUNTRY_CHANNEL_SUPPORT_GET(flag) \
+    WMI_GET_BITS(flag, 3, 1)
+#define WMI_SCAN_RADIO_CAP_NON_COUNTRY_CHANNEL_SUPPORT_SET(flag, val) \
+    WMI_SET_BITS(flag, 3, 1, val)
+
 
 typedef struct {
     A_UINT32 tlv_header; /* TLV tag and len; tag equals WMITLV_TAG_STRUC_WMI_SOC_HAL_REG_CAPABILITIES */
@@ -44823,6 +44934,7 @@ static INLINE A_UINT8 *wmi_id_to_name(A_UINT32 wmi_command)
         WMI_RETURN_STRING(WMI_ROAM_UPDATE_AUTH_STATUS_CMDID);
         WMI_RETURN_STRING(WMI_PDEV_DOWNLOAD_RTT_BLOB_CMDID);
         WMI_RETURN_STRING(WMI_RSSI_ADAPTIVE_BREACH_MONITOR_CONFIG_CMDID);
+        WMI_RETURN_STRING(WMI_NAN_DISC_SERVICE_SUSPEND_RESUME_CMDID);
     }
 
     return (A_UINT8 *) "Invalid WMI cmd";
@@ -49075,10 +49187,40 @@ typedef enum {
  * useful macros defined for manual_conf field in
  * wmi_roam_smd_config_cmd_fixed_param
  */
-#define WMI_SMD_CONFIG_MANUAL_CONF_GET_EXECUTION_VIA_NEW_AP(conf) \
+#define WMI_SMD_CONFIG_MANUAL_CONF_GET_EXECUTION_VIA_TARGET_AP(conf) \
     WMI_GET_BITS(conf, 0, 1)
-#define WMI_SMD_CONFIG_MANUAL_CONF_SET_EXECUTION_VIA_NEW_AP(conf, val) \
+#define WMI_SMD_CONFIG_MANUAL_CONF_SET_EXECUTION_VIA_TARGET_AP(conf, val) \
     WMI_SET_BITS(conf, 0, 1, val)
+/* retain legacy names as aliases for new names */
+#define WMI_SMD_CONFIG_MANUAL_CONF_GET_EXECUTION_VIA_NEW_AP \
+    WMI_SMD_CONFIG_MANUAL_CONF_GET_EXECUTION_VIA_TARGET_AP
+#define WMI_SMD_CONFIG_MANUAL_CONF_SET_EXECUTION_VIA_NEW_AP \
+    WMI_SMD_CONFIG_MANUAL_CONF_SET_EXECUTION_VIA_TARGET_AP
+
+#define WMI_SMD_CONFIG_MANUAL_CONF_GET_ENABLE_TUNNEL_PROBING(conf) \
+    WMI_GET_BITS(conf, 1, 1)
+#define WMI_SMD_CONFIG_MANUAL_CONF_SET_ENABLE_TUNNEL_PROBING(conf, val) \
+    WMI_SET_BITS(conf, 1, 1, val)
+
+#define WMI_SMD_CONFIG_MANUAL_CONF_GET_UL_SN_NO_TRANSFER(conf) \
+    WMI_GET_BITS(conf, 2, 1)
+#define WMI_SMD_CONFIG_MANUAL_CONF_SET_UL_SN_NO_TRANSFER(conf, val) \
+    WMI_SET_BITS(conf, 2, 1, val)
+
+#define WMI_SMD_CONFIG_MANUAL_CONF_GET_DL_SN_NO_TRANSFER(conf) \
+    WMI_GET_BITS(conf, 3, 1)
+#define WMI_SMD_CONFIG_MANUAL_CONF_SET_DL_SN_NO_TRANSFER(conf, val) \
+    WMI_SET_BITS(conf, 3, 1, val)
+
+#define WMI_SMD_CONFIG_MANUAL_CONF_GET_NOTIFY_SOURCE_AP(conf) \
+    WMI_GET_BITS(conf, 4, 1)
+#define WMI_SMD_CONFIG_MANUAL_CONF_SET_NOTIFY_SOURCE_AP(conf, val) \
+    WMI_SET_BITS(conf, 4, 1, val)
+
+#define WMI_SMD_CONFIG_MANUAL_CONF_GET_SEND_BTM_REQUEST(conf) \
+    WMI_GET_BITS(conf, 5, 1)
+#define WMI_SMD_CONFIG_MANUAL_CONF_SET_SEND_BTM_REQUEST(conf, val) \
+    WMI_SET_BITS(conf, 5, 1, val)
 
 typedef struct {
     A_UINT32 tlv_header; /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_roam_smd_config_cmd_fixed_param */
@@ -49099,7 +49241,13 @@ typedef struct {
     A_UINT32 flags;
     /* manual_conf:
      * Valid only when prefer_mode is WMI_ROAM_MANUAL_MODE
-     * BIT 0 - SMD transition execution via new AP if set.
+     * refer WMI_SMD_CONFIG_MANUAL_CONF_GET and _SET macros
+     * BIT 0 - SMD transition execution via target AP if set.
+     * BIT 1 - Tunnel probing if set.
+     * BIT 2 - UL SN - NO transfer if set, UL SN transfer if clear.
+     * BIT 3 - DL SN - NO transfer if set, DL SN transfer if clear.
+     * BIT 4 - DL drain if clear; notify source AP if set.
+     * BIT 5 - Send BTM request to AP if set.
      */
     A_UINT32 manual_conf;
 } wmi_roam_smd_config_cmd_fixed_param;
