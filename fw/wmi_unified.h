@@ -16496,13 +16496,75 @@ typedef struct {
 
     /*
      * event_count - If Multiple Events are send, this is to identify
-     * particular event out of Multiple Events that are send to host
+     * particular event out of Multiple Events that are send to host.
+     * For sub_ids 4-6: WMI_HCP_ENHANCED_BREAKDOWN_EVENT (=6).
      */
     A_UINT32 event_count;
 
     /** Pdev id requested */
     A_UINT32 pdev_id;
+
+    /**
+     * Enhanced-dump header fields.
+     * Populated only when event_count == WMI_HCP_ENHANCED_BREAKDOWN_EVENT.
+     * Must be zero for sub_ids 0-3 (old hosts stop parsing at old struct boundary;
+     * TLV length-guard ensures backward compatibility.
+     */
+    A_UINT32 radio_band;        /* 0=2G, 1=5G, 2=6G */
+    A_UINT32 chan_freq;          /* current channel frequency in MHz */
+    A_INT32  user_power_limit;  /* user TX power cap */
+    A_INT32  iwconfig_max_pwr;        /* max final power in 1 dBm steps (FW divides by 4) */
+    A_UINT32 iwconfig_max_phymode;    /* WMI_TPC_PREAM_BW of that combination */
+    A_UINT32 iwconfig_max_nss;        /* spatial streams */
+    A_UINT32 iwconfig_max_num_chains; /* Tx chains (NTx) */
+    A_UINT32 iwconfig_max_mcs;        /* real MCS index (EHT/UHR MCS14 start accounted) */
+    A_INT32  iwconfig_max_chain_gain_pwr; /* chain combining gain in dBm (FW divides quarter-dBm by 4) */
 } wmi_halphy_ctrl_path_stats_event_fixed_param;
+/* per-{phymode,num_chains,nss,mcs} power breakdown entry.
+ * Sent as ARRAY_STRUC TLV inside WMI_HALPHY_CTRL_PATH_STATS_EVENTID
+ * (event_count == WMI_HCP_ENHANCED_BREAKDOWN_EVENT) for sub_ids 4-6.
+ * All power values are 1 dBm unit.
+ *
+ * dword0: phymode[7:0], num_chains[15:8], nss[23:16], mcs[31:24]
+ * dword1: target_power[15:0], reg_power[31:16]   (A_INT16 raw bits)
+ * dword2: ctl_power[15:0],    final_power[31:16]  (A_INT16 raw bits)
+ */
+typedef struct {
+    A_UINT32 tlv_header;  /* WMITLV_TAG_STRUC_wmi_tpc_pwr_breakdown_entry */
+    A_UINT32 dword0;      /* phymode[7:0], num_chains[15:8], nss[23:16], mcs[31:24] */
+    A_UINT32 dword1;      /* target_power[15:0], reg_power[31:16] */
+    A_UINT32 dword2;      /* ctl_power[15:0], final_power[31:16] */
+} wmi_tpc_pwr_breakdown_entry;
+
+/* Accessors for wmi_tpc_pwr_breakdown_entry dword0 */
+#define WMI_DISP_TPC_PWR_PHYMODE_GET(d0)           WMI_GET_BITS(d0, 0, 8)
+#define WMI_DISP_TPC_PWR_PHYMODE_SET(d0, v)        WMI_SET_BITS(d0, 0, 8, v)
+#define WMI_DISP_TPC_PWR_NUM_CHAINS_GET(d0)        WMI_GET_BITS(d0, 8, 8)
+#define WMI_DISP_TPC_PWR_NUM_CHAINS_SET(d0, v)     WMI_SET_BITS(d0, 8, 8, v)
+#define WMI_DISP_TPC_PWR_NSS_GET(d0)               WMI_GET_BITS(d0, 16, 8)
+#define WMI_DISP_TPC_PWR_NSS_SET(d0, v)            WMI_SET_BITS(d0, 16, 8, v)
+#define WMI_DISP_TPC_PWR_MCS_GET(d0)               WMI_GET_BITS(d0, 24, 8)
+#define WMI_DISP_TPC_PWR_MCS_SET(d0, v)            WMI_SET_BITS(d0, 24, 8, v)
+/* Accessors for wmi_tpc_pwr_breakdown_entry dword1 (signed 16-bit power fields) */
+#define WMI_DISP_TPC_PWR_TARGET_PWR_GET(d1)        ((A_INT16)WMI_GET_BITS(d1, 0, 16))
+#define WMI_DISP_TPC_PWR_TARGET_PWR_SET(d1, v)     WMI_SET_BITS(d1, 0, 16, (A_UINT16)(v))
+#define WMI_DISP_TPC_PWR_REG_PWR_GET(d1)           ((A_INT16)WMI_GET_BITS(d1, 16, 16))
+#define WMI_DISP_TPC_PWR_REG_PWR_SET(d1, v)        WMI_SET_BITS(d1, 16, 16, (A_UINT16)(v))
+/* Accessors for wmi_tpc_pwr_breakdown_entry dword2 (signed 16-bit power fields) */
+#define WMI_DISP_TPC_PWR_CTL_PWR_GET(d2)           ((A_INT16)WMI_GET_BITS(d2, 0, 16))
+#define WMI_DISP_TPC_PWR_CTL_PWR_SET(d2, v)        WMI_SET_BITS(d2, 0, 16, (A_UINT16)(v))
+#define WMI_DISP_TPC_PWR_FINAL_PWR_GET(d2)         ((A_INT16)WMI_GET_BITS(d2, 16, 16))
+#define WMI_DISP_TPC_PWR_FINAL_PWR_SET(d2, v)      WMI_SET_BITS(d2, 16, 16, (A_UINT16)(v))
+
+/* enhanced stats query parameters.
+ * Optional TLV appended to WMI_REQUEST_HALPHY_CTRL_PATH_STATS_CMDID for sub_ids 4-6.
+ * phymode is MANDATORY for sub_ids 4-6; nss/num_chains are optional (0xFF = sweep all). */
+typedef struct {
+    A_UINT32 tlv_header;  /* WMITLV_TAG_STRUC_wmi_halphy_enhanced_stats_query_param */
+    A_UINT32 phymode;     /* WMI_TPC_PREAM_BW value; MANDATORY for sub_ids 4-6 */
+    A_UINT32 nss;         /* optional; 0xFF = sweep 1..maxNss for phymode */
+    A_UINT32 num_chains;  /* optional; 0xFF = sweep all ntx chains; specific value = single ntx filter */
+} wmi_halphy_enhanced_stats_query_param;
 
 typedef struct {
     /** TLV tag and len; tag equals
@@ -41893,10 +41955,18 @@ typedef enum {
 } wmi_ctrl_path_stats_granularity;
 
 typedef enum {
-    WMI_HALPHY_CTRL_PATH_SU_STATS = 0,
-    WMI_HALPHY_CTRL_PATH_SUTXBF_STATS,
-    WMI_HALPHY_CTRL_PATH_MU_STATS,
-    WMI_HALPHY_CTRL_PATH_MUTXBF_STATS,
+    WMI_HALPHY_CTRL_PATH_SU_STATS               = 0,
+    WMI_HALPHY_CTRL_PATH_SUTXBF_STATS           = 1,
+    WMI_HALPHY_CTRL_PATH_MU_STATS               = 2,
+    WMI_HALPHY_CTRL_PATH_MUTXBF_STATS           = 3,
+    WMI_HALPHY_CTRL_PATH_ENHANCED_SU_STATS      = 4,
+    WMI_HALPHY_CTRL_PATH_ENHANCED_SUTXBF_STATS  = 5,
+    WMI_HALPHY_CTRL_PATH_ENHANCED_MU_STATS      = 6,
+    /* add any new HALPHY_CTRL_PATH stats types here */
+
+    /* note that the value of WMI_HALPHY_CTRL_PATH_STATS_MAX will 
+     * change over time */
+    WMI_HALPHY_CTRL_PATH_STATS_MAX
 } wmi_halphy_ctrl_path_subid;
 
 typedef struct {
