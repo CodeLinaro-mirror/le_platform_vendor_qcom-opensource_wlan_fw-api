@@ -286,9 +286,12 @@
  * 3.156 Add qdata_consent_pkt flag in rx_peer_metadata_v1a and v2.
  * 3.157 Add TCL_METADATA_V3 defs.
  * 3.158 Add more fields in htt_tx_monitor_cfg_t.
+ * 3.159 Add enable_sa_search and enable_da_search flags in htt_ast_info_t.
+ * 3.160 Add is_txop_intent_valid and qmid fields in MPDUQ_OR_MSDUQ_INFO.
+ * 3.161 Add rxdma1_status_ring fields in rx_ring_selection_cfg.
  */
 #define HTT_CURRENT_VERSION_MAJOR 3
-#define HTT_CURRENT_VERSION_MINOR 158
+#define HTT_CURRENT_VERSION_MINOR 161
 
 #define HTT_NUM_TX_FRAG_DESC  1024
 
@@ -945,6 +948,7 @@ typedef enum {
     HTT_STATS_DFS_IPC_RING_TAG                      = 265, /* htt_stats_dfs_ipc_ring_tlv */
     HTT_STATS_PHY_DPD_DEBUG_CHAIN_V1_TAG            = 266, /* htt_stats_phy_dpd_debug_chain_v1_tlv */
     HTT_STATS_PHY_TPC_DEBUG_CHAIN_V1_TAG            = 267, /* htt_stats_phy_tpc_debug_chain_v1_tlv */
+    HTT_STATS_PHY_NF_SUBBAND_TAG                    = 268, /* htt_stats_phy_nf_subband_tlv */
 
     HTT_STATS_MAX_TAG,
 } htt_stats_tlv_tag_t;
@@ -6551,7 +6555,15 @@ PREPACK struct htt_rx_ring_selection_cfg_t {
              rxmon_md_ctrl_hdrlen      : 2,
              rxmon_md_mgmt_hdrlen      : 2,
              rxmon_enable_hdr_per_ppdu : 1,
-             rxmon_rsvd                : 7;
+             rxmon_fp_fpmo_data_mpdu_filter_in_enable: 1,
+             rxmon_rsvd                : 6;
+
+    A_UINT32 rxdma1_status_ring_fp_data_mpdu_tlv_filter_in_control_ix0;
+    A_UINT32 rxdma1_status_ring_fpmo_data_mpdu_tlv_filter_in_control_ix0;
+    A_UINT32
+        rxdma1_status_ring_fp_data_mpdu_tlv_filter_in_control_ix1   : 6,
+        rxdma1_status_ring_fpmo_data_mpdu_tlv_filter_in_control_ix1 : 6,
+        data_mpdu_tlv_filter_in_control_reserved : 20;
 } POSTPACK;
 
 /**
@@ -7390,6 +7402,66 @@ enum htt_reg_write_selection {
                 ((_var) |= ((_val) << HTT_RX_RING_SELECTION_CFG_RXMDN_ENABLE_HEADER_PER_PPDU_S)); \
             } while (0)
 
+#define HTT_RX_RING_SELECTION_CFG_RXMON_FP_FPMO_DATA_MPDU_FILTER_IN_ENABLE_M  0x02000000
+#define HTT_RX_RING_SELECTION_CFG_RXMON_FP_FPMO_DATA_MPDU_FILTER_IN_ENABLE_S  25
+
+#define HTT_RX_RING_SELECTION_CFG_RXMON_FP_FPMO_DATA_MPDU_FILTER_IN_ENABLE_GET(_var) \
+    (((_var) & HTT_RX_RING_SELECTION_CFG_RXMON_FP_FPMO_DATA_MPDU_FILTER_IN_ENABLE_M) >> \
+     HTT_RX_RING_SELECTION_CFG_RXMON_FP_FPMO_DATA_MPDU_FILTER_IN_ENABLE_S)
+
+#define HTT_RX_RING_SELECTION_CFG_RXMON_FP_FPMO_DATA_MPDU_FILTER_IN_ENABLE_SET(_var, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_RX_RING_SELECTION_CFG_RXMON_FP_FPMO_DATA_MPDU_FILTER_IN_ENABLE, _val); \
+        ((_var) |= (((_val) & 0x1) << HTT_RX_RING_SELECTION_CFG_RXMON_FP_FPMO_DATA_MPDU_FILTER_IN_ENABLE_S)); \
+    } while (0)
+
+#define RXDMA1_STATUS_RING_FP_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX0_M  0xFFFFFFFF
+#define RXDMA1_STATUS_RING_FP_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX0_S  0
+
+#define RXDMA1_STATUS_RING_FP_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX0_GET(_var) \
+    ((_var) & RXDMA1_STATUS_RING_FP_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX0_M)
+
+#define RXDMA1_STATUS_RING_FP_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX0_SET(_var, _val) \
+    do { \
+        (_var) = (_val); \
+    } while (0)
+
+#define RXDMA1_STATUS_RING_FPMO_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX0_M  0xFFFFFFFF
+#define RXDMA1_STATUS_RING_FPMO_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX0_S  0
+
+#define RXDMA1_STATUS_RING_FPMO_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX0_GET(_var) \
+    ((_var) & RXDMA1_STATUS_RING_FPMO_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX0_M)
+
+#define RXDMA1_STATUS_RING_FPMO_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX0_SET(_var, _val) \
+    do { \
+        (_var) = (_val); \
+    } while (0)
+
+#define RXDMA1_STATUS_RING_FP_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX1_M  0x0000003F
+#define RXDMA1_STATUS_RING_FP_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX1_S  0
+
+#define RXDMA1_STATUS_RING_FP_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX1_GET(_var) \
+    (((_var) & RXDMA1_STATUS_RING_FP_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX1_M) >> \
+     RXDMA1_STATUS_RING_FP_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX1_S)
+
+#define RXDMA1_STATUS_RING_FP_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX1_SET(_var, _val) \
+    do { \
+        (_var) &= ~RXDMA1_STATUS_RING_FP_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX1_M; \
+        (_var) |= (((_val) & 0x3F) << RXDMA1_STATUS_RING_FP_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX1_S); \
+    } while (0)
+
+#define RXDMA1_STATUS_RING_FPMO_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX1_M  0x00000FC0
+#define RXDMA1_STATUS_RING_FPMO_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX1_S  6
+
+#define RXDMA1_STATUS_RING_FPMO_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX1_GET(_var) \
+    (((_var) & RXDMA1_STATUS_RING_FPMO_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX1_M) >> \
+     RXDMA1_STATUS_RING_FPMO_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX1_S)
+
+#define RXDMA1_STATUS_RING_FPMO_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX1_SET(_var, _val) \
+    do { \
+        (_var) &= ~RXDMA1_STATUS_RING_FPMO_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX1_M; \
+        (_var) |= (((_val) & 0x3F) << RXDMA1_STATUS_RING_FPMO_DATA_MPDU_TLV_FILTER_IN_CONTROL_IX1_S); \
+    } while (0)
 
 /*
  * Subtype based MGMT frames enable bits.
@@ -12518,7 +12590,12 @@ PREPACK struct htt_h2t_mpduq_and_msduq_info_hdr {
  *          b'20:20 - sam_msduq_sched_eligible: Indicates that this SAM MSDUQ
  *                    is eligible for autonomous SAM scheduling. The value in
  *                    this field is ignored if sam_msduq_allocated is 0.
- *          b'31:21 – reserved
+ *          b'21:21 - is_txop_intent_valid: Indicates whether qmid is valid and
+ *                    to indicate to FW to start using the msduq for end-to-end
+ *                    forwarding.
+ *          b'29:22 - qmid: The queue manager ID (QMID) assigned for this
+ *                    MSDUQ. Only valid if is_txop_intent_valid is 1.
+ *          b'31:30 – reserved
  * Additional reserved dwords for future use cases
  */
 
@@ -12614,7 +12691,9 @@ PREPACK struct htt_h2t_mpduq_or_msduq_info {
                      sam_msduq_id:            13, /* bits 17:5  */
                      sam_msduq_priority:       2, /* bits 19:18 */
                      sam_msduq_sched_eligible: 1, /* bit     20 */
-                     reserved2a:              11; /* bits 31:21 */
+                     is_txop_intent_valid:     1, /* bit     21 */
+                     qmid:                     8, /* bits 29:22 */
+                     reserved2a:               2; /* bits 31:30 */
             A_UINT32 reserved2b;                  /* bits 31:0  */
             A_UINT32 reserved2c;                  /* bits 31:0  */
             A_UINT32 reserved2d;                  /* bits 31:0  */
@@ -12879,6 +12958,28 @@ PREPACK struct htt_h2t_mpduq_or_msduq_info {
         ((_var) |= ((_val) << HTT_H2T_MSG_TYPE_MSDUQ_INFO_SAM_MSDUQ_SCHED_ELIGIBLE_S)); \
     } while (0)
 
+#define HTT_H2T_MSG_TYPE_MSDUQ_INFO_IS_TXOP_INTENT_VALID_M    0x00200000
+#define HTT_H2T_MSG_TYPE_MSDUQ_INFO_IS_TXOP_INTENT_VALID_S            21
+#define HTT_H2T_MSG_TYPE_MSDUQ_INFO_IS_TXOP_INTENT_VALID_GET(_var) \
+        (((_var) & HTT_H2T_MSG_TYPE_MSDUQ_INFO_IS_TXOP_INTENT_VALID_M) >> \
+                HTT_H2T_MSG_TYPE_MSDUQ_INFO_IS_TXOP_INTENT_VALID_S)
+#define HTT_H2T_MSG_TYPE_MSDUQ_INFO_IS_TXOP_INTENT_VALID_SET(_var, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_H2T_MSG_TYPE_MSDUQ_INFO_IS_TXOP_INTENT_VALID, _val);  \
+        ((_var) |= ((_val) << HTT_H2T_MSG_TYPE_MSDUQ_INFO_IS_TXOP_INTENT_VALID_S)); \
+    } while (0)
+
+#define HTT_H2T_MSG_TYPE_MSDUQ_INFO_QMID_M    0x3FC00000
+#define HTT_H2T_MSG_TYPE_MSDUQ_INFO_QMID_S            22
+#define HTT_H2T_MSG_TYPE_MSDUQ_INFO_QMID_GET(_var) \
+        (((_var) & HTT_H2T_MSG_TYPE_MSDUQ_INFO_QMID_M) >> \
+                 HTT_H2T_MSG_TYPE_MSDUQ_INFO_QMID_S)
+#define HTT_H2T_MSG_TYPE_MSDUQ_INFO_QMID_SET(_var, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_H2T_MSG_TYPE_MSDUQ_INFO_QMID, _val);  \
+        ((_var) |= ((_val) << HTT_H2T_MSG_TYPE_MSDUQ_INFO_QMID_S)); \
+    } while (0)
+
 
 /*
  * @brief  host -> target HTT_AST_INFO message
@@ -12897,9 +12998,9 @@ PREPACK struct htt_h2t_mpduq_or_msduq_info {
  *    |                           ase_hash_key2                                |
  *    |------------------------------------------------------------------------|
  *    |                           ase_hash_key3                                |
- *    |--------------------+--+--+--+--+--+----------------+-------------------|
- *    |    reserved        |L |K |J |I |H |     tmo        |ast_base_addr_39_32|
- *    |--------------------+--+--+--+--+--+----------------+-------------------|
+ *    |--------------+--+--+--+--+--+--+--+----------------+-------------------|
+ *    |    reserved  |N |M |L |K |J |I |H |     tmo        |ast_base_addr_39_32|
+ *    |--------------+--+--+--+--+--+--+--+----------------+-------------------|
  *
  * The message is interpreted as follows:
  * dword0    b'7:0   - msg_type
@@ -12925,6 +13026,8 @@ PREPACK struct htt_h2t_mpduq_or_msduq_info {
  *                     If enabled, a new cache entry will always be created
  *                     for requests for which matching data was found
  *                     neither in cache nor in memory.
+ *           b'21    - M - enable_sa_search
+ *           b'22    - N - enable_da_search
  */
 PREPACK struct htt_ast_info_t {
         A_UINT32 msg_type:        8,
@@ -12941,7 +13044,9 @@ PREPACK struct htt_ast_info_t {
                  ast_cache_cmd_read_bypass_dis:     1, /* 18 */
                  ast_cache_write_back_fix_dis:      1, /* 19 */
                  ast_cache_only_entry_cmd_fix_dis:  1, /* 20 */
-                 reserved:                         11;
+                 enable_sa_search:                  1, /* 21 */
+                 enable_da_search:                  1, /* 22 */
+                 reserved:                          9;
 } POSTPACK;
 
 
@@ -13048,6 +13153,28 @@ PREPACK struct htt_ast_info_t {
         do { \
             HTT_CHECK_SET_VAL(HTT_AST_INFO_AST_CACHE_ONLY_ENTRY_CMD_FIX_DIS, _val); \
             ((_var) |= ((_val) << HTT_AST_INFO_AST_CACHE_ONLY_ENTRY_CMD_FIX_DIS_S)); \
+        } while (0)
+
+#define HTT_AST_INFO_ENABLE_SA_SEARCH_M                         0x00200000
+#define HTT_AST_INFO_ENABLE_SA_SEARCH_S                         21
+#define HTT_AST_INFO_ENABLE_SA_SEARCH_GET(_var) \
+        (((_var) & HTT_AST_INFO_ENABLE_SA_SEARCH_M) >> \
+            HTT_AST_INFO_ENABLE_SA_SEARCH_S)
+#define HTT_AST_INFO_ENABLE_SA_SEARCH_SET(_var, _val) \
+        do { \
+            HTT_CHECK_SET_VAL(HTT_AST_INFO_ENABLE_SA_SEARCH, _val); \
+            ((_var) |= ((_val) << HTT_AST_INFO_ENABLE_SA_SEARCH_S)); \
+        } while (0)
+
+#define HTT_AST_INFO_ENABLE_DA_SEARCH_M                         0x00400000
+#define HTT_AST_INFO_ENABLE_DA_SEARCH_S                         22
+#define HTT_AST_INFO_ENABLE_DA_SEARCH_GET(_var) \
+        (((_var) & HTT_AST_INFO_ENABLE_DA_SEARCH_M) >> \
+            HTT_AST_INFO_ENABLE_DA_SEARCH_S)
+#define HTT_AST_INFO_ENABLE_DA_SEARCH_SET(_var, _val) \
+        do { \
+            HTT_CHECK_SET_VAL(HTT_AST_INFO_ENABLE_DA_SEARCH, _val); \
+            ((_var) |= ((_val) << HTT_AST_INFO_ENABLE_DA_SEARCH_S)); \
         } while (0)
 
 

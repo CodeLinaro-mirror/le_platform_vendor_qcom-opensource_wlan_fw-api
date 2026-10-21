@@ -1682,6 +1682,8 @@ typedef struct {
     htt_tlv_hdr_t tlv_hdr;
     /* Num MGMT MPDU transmitted by the target */
     A_UINT32 fw_tx_mgmt_subtype[HTT_STATS_SUBTYPE_MAX];
+    /* Num unicast probe response MPDU transmitted by the target */
+    A_UINT32 fw_tx_ucast_probe_resp;
 } htt_stats_pdev_ctrl_path_tx_stats_tlv;
 /* preserve old name alias for new name consistent with the tag name */
 typedef htt_stats_pdev_ctrl_path_tx_stats_tlv htt_pdev_ctrl_path_tx_stats_tlv_v;
@@ -5012,6 +5014,12 @@ typedef struct {
     A_UINT32 bn_basic_trig_sch_status[HTT_TX_PDEV_STATS_NUM_TX_ERR_STATUS];
     /** 11BN UHR UL OFDMA Basic Trigger scheduler error code */
     A_UINT32 bn_basic_trig_sch_flag_err[HTT_TX_SELFGEN_NUM_SCH_TSFLAG_ERROR_STATS];
+    /**
+     * 11BN UHR UL MUMIMO Basic Trigger scheduler completion status reason code
+     */
+    A_UINT32 bn_ulmumimo_trig_sch_status[HTT_TX_PDEV_STATS_NUM_TX_ERR_STATUS];
+    /** 11BN UHR UL MUMIMO Basic Trigger scheduler error code */
+    A_UINT32 bn_ulmumimo_trig_sch_flag_err[HTT_TX_SELFGEN_NUM_SCH_TSFLAG_ERROR_STATS];
 } htt_stats_tx_selfgen_bn_sched_status_tlv;
 
 /* STATS_TYPE : HTT_DBG_EXT_STATS_TX_SELFGEN_INFO
@@ -6497,6 +6505,8 @@ typedef struct {
      * element 2: above 500ms
      */
     A_UINT32 reo2sw4ringipa_backpress_hist[3];
+    /* Num unicast probe request MPDU received by FW */
+    A_UINT32 fw_ring_ucast_probe_req;
 } htt_stats_rx_ring_stats_tlv;
 /* preserve old name alias for new name consistent with the tag name */
 typedef htt_stats_rx_ring_stats_tlv htt_rx_fw_ring_stats_tlv_v;
@@ -8366,6 +8376,7 @@ typedef struct {
     A_UINT32 be_ulofdma_implicit_trig_qos_null;
     A_UINT32 bn_ulofdma_implicit_trig_tried;
     A_UINT32 bn_ulofdma_implicit_trig_qos_null;
+    A_UINT32 bn_ul_ofdma_rx_2x_ldpc;
 } htt_stats_rx_pdev_be_bn_ul_trig_tlv;
 /* preserve old names as aliases */
 typedef htt_stats_rx_pdev_be_bn_ul_trig_tlv
@@ -8685,6 +8696,8 @@ typedef struct {
      * in response to basic trigger. Typically a data response is expected.
      */
     A_UINT32 bn_ul_mumimo_basic_trigger_rx_qos_null_only;
+    /** Number of times UL MUMIMO TB PPDUs received with 2xLDPC */
+    A_UINT32 bn_ul_mumimo_rx_2x_ldpc;
 } htt_stats_rx_pdev_ul_mumimo_trig_bn_tlv;
 
 #define HTT_STATS_RX_PDEV_UL_MUMIMO_TRIG_BN_MAC_ID_GET(word) \
@@ -9012,6 +9025,8 @@ typedef struct {
         A_UINT32 high_32;
     } bytes_received;
     A_UINT32  rx_msdu_cnt_ac[HTT_NUM_AC_WMM];
+    /** Num unicast probe request MPDU given to protocol */
+    A_UINT32 fw_ring_ucast_probe_req;
 } htt_stats_rx_pdev_fw_stats_tlv;
 /* preserve old name alias for new name consistent with the tag name */
 typedef htt_stats_rx_pdev_fw_stats_tlv htt_rx_pdev_fw_stats_tlv;
@@ -12169,8 +12184,10 @@ typedef struct {
      * Error count per error source;
      * [0] = unknown; [1] = LSIG; [2] = HTSIG; [3] = VHTSIG; [4] = HESIG;
      * [5] = RXTD_OTA; [6] = RXTD_FATAL; [7] = DEMF; [8] = ROBE;
-     * [9] = PMI; [10] = TXFD; [11] = TXTD; [12] = PHYRF
-     * [13-19]=RSVD
+     * [9] = PMI; [10] = TXFD; [11] = TXTD; [12] = PHYRF;
+     * [13-15] = RX_CCK;
+     * [16] = EHTSIG; [17] = USIG;
+     * [18-19]=RSVD
      */
     A_UINT32 per_blk_err_cnt[HTT_MAX_PER_BLK_ERR_CNT];
     /** rx_ota_err_cnt -
@@ -12347,6 +12364,40 @@ typedef struct {
 } htt_stats_phy_stats_tlv;
 /* preserve old name alias for new name consistent with the tag name */
 typedef htt_stats_phy_stats_tlv htt_phy_stats_tlv;
+
+/*
+ * STATS TYPE: HTT_DBG_EXT_STATS_PHY (stat 37), subtype 1 - per-20MHz subband NF
+ * TLV_TAGS:
+ *    - HTT_STATS_PHY_NF_SUBBAND_TAG
+ *
+ * Requested via
+ *     req->cfg_param[0] == HTT_STATS_PHY_STATS_SUBTYPE_NF_SUBBAND (1);
+ * default (subtype 0 / cfg_param[0] not set) continues to return only
+ * htt_stats_phy_stats_tlv above, unchanged.
+ */
+#define HTT_STATS_MAX_20MHZ_SUBBANDS  16
+#define HTT_PHY_NF_SUBBAND_INVALID    1
+
+typedef enum {
+    HTT_STATS_PHY_STATS_SUBTYPE_DEFAULT    = 0,
+    HTT_STATS_PHY_STATS_SUBTYPE_NF_SUBBAND = 1,
+} HTT_STATS_PHY_STATS_SUBTYPE;
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    /* num_subbands:
+     * number of active 20 MHz sub-bands for the current channel BW.
+     *   20 MHz -> 1, 40 MHz -> 2, 80 MHz -> 4, 160 MHz -> 8, 320 MHz -> 16.
+     * Entries [chain][0..num_subbands-1] hold valid dBm values.
+     * Entries [chain][num_subbands..HTT_STATS_MAX_20MHZ_SUBBANDS-1] are
+     * set to HTT_PHY_NF_SUBBAND_INVALID.
+     */
+    A_UINT32 num_subbands;
+    /* per chain, per 20MHz subband runtime (live measured) NF in dBm */
+    A_INT32  nf_runtime_subband[HTT_STATS_MAX_CHAINS][HTT_STATS_MAX_20MHZ_SUBBANDS];
+    /* per chain, per 20MHz subband BDF (calibration-loaded) NF in dBm */
+    A_INT32  nf_bdf_subband[HTT_STATS_MAX_CHAINS][HTT_STATS_MAX_20MHZ_SUBBANDS];
+} htt_stats_phy_nf_subband_tlv;
 
 
 #define HTT_STATS_PHY_RESET_CAL_DATA_COMPRESSED_M 0x00000001
@@ -15204,6 +15255,8 @@ typedef struct {
     A_UINT32 rx_stbc[HTT_RX_PDEV_STATS_NUM_MCS_COUNTERS + HTT_RX_PDEV_STATS_NUM_EXTRA_MCS_COUNTERS + HTT_RX_PDEV_STATS_NUM_EXTRA2_MCS_COUNTERS];
     A_UINT32 rts_cnt;
     A_UINT32 rts_success;
+    A_UINT32 fw_tx_ucast_probe_resp;
+    A_UINT32 fw_rx_ucast_probe_req;
 } htt_stats_odd_pdev_mandatory_tlv;
 /* preserve old name alias for new name consistent with the tag name */
 typedef htt_stats_odd_pdev_mandatory_tlv htt_odd_mandatory_pdev_stats_tlv;
@@ -15276,6 +15329,62 @@ typedef enum {
     HTT_STATS_SCHED_OFDMA_TXBF_CV_IMAGE_BUF_INVALID,                   /* 7 */
     HTT_STATS_SCHED_OFDMA_TXBF_INELIGIBILITY_MAX,
 } htt_stats_sched_ofdma_txbf_ineligibility_t;
+
+typedef enum {
+    HTT_STATS_FIRST_CMD_ABORT_PRIMARY_NOT_TCP,
+    HTT_STATS_FIRST_CMD_ABORT_SOUNDING_SEQ,
+    HTT_STATS_FIRST_CMD_ABORT_STANDALONE_BSRP,
+    HTT_STATS_FIRST_CMD_ABORT_SPECIAL_SEQUENCE,
+    HTT_STATS_FIRST_CMD_ABORT_NOT_BURST_SEQUENCE,
+    HTT_STATS_FIRST_CMD_ABORT_TXTIME_NOT_SUFFICIENT,
+
+    /*
+     * ABORT MAX_DEFINED - how many abort reasons have been defined.
+     * (Up to ABORT MAX will be allocated, but some of those are
+     * reserved rather than defined and valid.)
+     */
+    HTT_STATS_COMB_ABORT_FIRST_CMD_MAX_DEFINED,
+    /*
+     * The following reserved values are available to use for other
+     * abort reasons that become defined in the future.
+     */
+    HTT_STATS_FIRST_CMD_ABORT_RESERVED1 =
+        HTT_STATS_COMB_ABORT_FIRST_CMD_MAX_DEFINED,
+    HTT_STATS_FIRST_CMD_ABORT_RESERVED2,
+    HTT_STATS_FIRST_CMD_ABORT_RESERVED3,
+
+    HTT_STATS_COMB_ABORT_FIRST_CMD_MAX
+} htt_stats_sched_algo_comb_first_cmd_abort;
+
+typedef enum {
+    HTT_STATS_SECOND_CMD_ABORT_PRIMARY_NOT_TCP,
+    HTT_STATS_SECOND_CMD_ABORT_SOUNDING_SEQ,
+    HTT_STATS_SECOND_CMD_ABORT_STANDALONE_BSRP,
+    HTT_STATS_SECOND_CMD_ABORT_SPECIAL_SEQUENCE,
+    HTT_STATS_DUAL_RING_SENSITIVE_BIT_SET,
+    HTT_STATS_SECOND_CMD_NOT_AVAILABLE,
+    HTT_STATS_SECOND_CMD_ABORT_BW_MISMATCH,
+    HTT_STATS_SECOND_CMD_ABORT_AC_MISMATCH,
+    HTT_STATS_SECOND_CMD_ABORT_SAME_TXTYPE,
+    HTT_STATS_TOTAL_TXOP_EXCEEDED,
+
+    /*
+     * ABORT MAX_DEFINED - how many abort reasons have been defined.
+     * (Up to ABORT MAX will be allocated, but some of those are
+     * reserved rather than defined and valid.)
+     */
+    HTT_STATS_COMB_ABORT_SECOND_CMD_MAX_DEFINED,
+    /*
+     * The following reserved values are available to use for other
+     * abort reasons that become defined in the future.
+     */
+    HTT_STATS_SECOND_CMD_ABORT_RESERVED1 =
+        HTT_STATS_COMB_ABORT_SECOND_CMD_MAX_DEFINED,
+    HTT_STATS_SECOND_CMD_ABORT_RESERVED2,
+    HTT_STATS_SECOND_CMD_ABORT_RESERVED3,
+
+    HTT_STATS_COMB_ABORT_SECOND_CMD_MAX
+} htt_stats_sched_algo_comb_second_cmd_abort;
 
 #define HTT_MAX_NUM_CHAN_ACC_LAT_INTR 9
 
@@ -15374,6 +15483,18 @@ typedef struct {
      * only for UL, due to skipping DL voluntarily.
      */
     A_UINT32 running_ul_scheduler_due_to_skip_dl[HTT_NUM_AC_WMM];
+    /**
+     * Counts the number of occurrences of different abort reasons for
+     * the first command of the combined sequences
+     */
+    A_UINT32 abort_reason_comb_first_cmd[HTT_STATS_COMB_ABORT_FIRST_CMD_MAX];
+    /**
+     * Counts the number of occurrences of different abort reasons for
+     * the second command of the combined sequences
+     */
+    A_UINT32 abort_reason_comb_second_cmd[HTT_STATS_COMB_ABORT_SECOND_CMD_MAX];
+    /** Percentage of window used by OBSS Rx */
+    A_UINT32 obss_rx_airtime;
 } htt_stats_pdev_sched_algo_ofdma_stats_tlv;
 /* preserve old name alias for new name consistent with the tag name */
 typedef htt_stats_pdev_sched_algo_ofdma_stats_tlv
