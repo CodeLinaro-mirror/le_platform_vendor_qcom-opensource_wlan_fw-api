@@ -1682,6 +1682,8 @@ typedef struct {
     htt_tlv_hdr_t tlv_hdr;
     /* Num MGMT MPDU transmitted by the target */
     A_UINT32 fw_tx_mgmt_subtype[HTT_STATS_SUBTYPE_MAX];
+    /* Num unicast probe response MPDU transmitted by the target */
+    A_UINT32 fw_tx_ucast_probe_resp;
 } htt_stats_pdev_ctrl_path_tx_stats_tlv;
 /* preserve old name alias for new name consistent with the tag name */
 typedef htt_stats_pdev_ctrl_path_tx_stats_tlv htt_pdev_ctrl_path_tx_stats_tlv_v;
@@ -5012,6 +5014,12 @@ typedef struct {
     A_UINT32 bn_basic_trig_sch_status[HTT_TX_PDEV_STATS_NUM_TX_ERR_STATUS];
     /** 11BN UHR UL OFDMA Basic Trigger scheduler error code */
     A_UINT32 bn_basic_trig_sch_flag_err[HTT_TX_SELFGEN_NUM_SCH_TSFLAG_ERROR_STATS];
+    /**
+     * 11BN UHR UL MUMIMO Basic Trigger scheduler completion status reason code
+     */
+    A_UINT32 bn_ulmumimo_trig_sch_status[HTT_TX_PDEV_STATS_NUM_TX_ERR_STATUS];
+    /** 11BN UHR UL MUMIMO Basic Trigger scheduler error code */
+    A_UINT32 bn_ulmumimo_trig_sch_flag_err[HTT_TX_SELFGEN_NUM_SCH_TSFLAG_ERROR_STATS];
 } htt_stats_tx_selfgen_bn_sched_status_tlv;
 
 /* STATS_TYPE : HTT_DBG_EXT_STATS_TX_SELFGEN_INFO
@@ -6497,6 +6505,8 @@ typedef struct {
      * element 2: above 500ms
      */
     A_UINT32 reo2sw4ringipa_backpress_hist[3];
+    /* Num unicast probe request MPDU received by FW */
+    A_UINT32 fw_ring_ucast_probe_req;
 } htt_stats_rx_ring_stats_tlv;
 /* preserve old name alias for new name consistent with the tag name */
 typedef htt_stats_rx_ring_stats_tlv htt_rx_fw_ring_stats_tlv_v;
@@ -8366,6 +8376,7 @@ typedef struct {
     A_UINT32 be_ulofdma_implicit_trig_qos_null;
     A_UINT32 bn_ulofdma_implicit_trig_tried;
     A_UINT32 bn_ulofdma_implicit_trig_qos_null;
+    A_UINT32 bn_ul_ofdma_rx_2x_ldpc;
 } htt_stats_rx_pdev_be_bn_ul_trig_tlv;
 /* preserve old names as aliases */
 typedef htt_stats_rx_pdev_be_bn_ul_trig_tlv
@@ -8685,6 +8696,8 @@ typedef struct {
      * in response to basic trigger. Typically a data response is expected.
      */
     A_UINT32 bn_ul_mumimo_basic_trigger_rx_qos_null_only;
+    /** Number of times UL MUMIMO TB PPDUs received with 2xLDPC */
+    A_UINT32 bn_ul_mumimo_rx_2x_ldpc;
 } htt_stats_rx_pdev_ul_mumimo_trig_bn_tlv;
 
 #define HTT_STATS_RX_PDEV_UL_MUMIMO_TRIG_BN_MAC_ID_GET(word) \
@@ -9012,6 +9025,8 @@ typedef struct {
         A_UINT32 high_32;
     } bytes_received;
     A_UINT32  rx_msdu_cnt_ac[HTT_NUM_AC_WMM];
+    /** Num unicast probe request MPDU given to protocol */
+    A_UINT32 fw_ring_ucast_probe_req;
 } htt_stats_rx_pdev_fw_stats_tlv;
 /* preserve old name alias for new name consistent with the tag name */
 typedef htt_stats_rx_pdev_fw_stats_tlv htt_rx_pdev_fw_stats_tlv;
@@ -12169,8 +12184,10 @@ typedef struct {
      * Error count per error source;
      * [0] = unknown; [1] = LSIG; [2] = HTSIG; [3] = VHTSIG; [4] = HESIG;
      * [5] = RXTD_OTA; [6] = RXTD_FATAL; [7] = DEMF; [8] = ROBE;
-     * [9] = PMI; [10] = TXFD; [11] = TXTD; [12] = PHYRF
-     * [13-19]=RSVD
+     * [9] = PMI; [10] = TXFD; [11] = TXTD; [12] = PHYRF;
+     * [13-15] = RX_CCK;
+     * [16] = EHTSIG; [17] = USIG;
+     * [18-19]=RSVD
      */
     A_UINT32 per_blk_err_cnt[HTT_MAX_PER_BLK_ERR_CNT];
     /** rx_ota_err_cnt -
@@ -15238,6 +15255,8 @@ typedef struct {
     A_UINT32 rx_stbc[HTT_RX_PDEV_STATS_NUM_MCS_COUNTERS + HTT_RX_PDEV_STATS_NUM_EXTRA_MCS_COUNTERS + HTT_RX_PDEV_STATS_NUM_EXTRA2_MCS_COUNTERS];
     A_UINT32 rts_cnt;
     A_UINT32 rts_success;
+    A_UINT32 fw_tx_ucast_probe_resp;
+    A_UINT32 fw_rx_ucast_probe_req;
 } htt_stats_odd_pdev_mandatory_tlv;
 /* preserve old name alias for new name consistent with the tag name */
 typedef htt_stats_odd_pdev_mandatory_tlv htt_odd_mandatory_pdev_stats_tlv;
