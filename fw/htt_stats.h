@@ -1428,7 +1428,12 @@ typedef struct {
     /** Number of hardware reaped (Tx completed) packets in VLP mode */
     A_UINT32 hw_reaped_vlp;
     A_UINT32 avg_channel_access_latency_per_ac[HTT_NUM_AC_WMM]; /* usec units */
-    A_UINT32 seq_posted_per_tid[HTT_PDEV_STATS_MAX_DATA_TID_COUNT];
+    /** Total CTS count */
+    A_UINT32 cts_cnt;
+    /** CTS count of data PPDU's */
+    A_UINT32 cts_data_cnt;
+    /** Histogram of CTS2SELF in data ppdu's from 0 to 3 */
+    A_UINT32 cts_data_hist[4];
 } htt_stats_tx_pdev_cmn_tlv;
 /* preserve old name alias for new name consistent with the tag name */
 typedef htt_stats_tx_pdev_cmn_tlv htt_tx_pdev_stats_cmn_tlv;
@@ -9499,6 +9504,29 @@ typedef enum {
 
 #define HTT_TX_CV_CORR_MAX_NUM_COLUMNS 8
 
+#define HTT_TX_CV_QUERY_TOTAL_STATUS   70
+#define HTT_TX_CV_QUERY_PER_LINE_LIMIT 10
+
+#define HTT_TX_SOUNDING_MAX_NR 8
+#define HTT_TX_SOUNDING_MAX_NC 4
+
+#define HTT_TX_SOUNDING_DUR_SU_FB_HISTOGRAM 5
+#define HTT_TX_SOUNDING_DUR_MU_FB_HISTOGRAM 5
+#define HTT_TX_SOUNDING_HISTOGRAM_BIN_SIZE  250
+
+#define HTT_TX_SOUNDING_STATS_WIFI_VERSION_M 0x0000000f
+#define HTT_TX_SOUNDING_STATS_WIFI_VERSION_S 0
+
+#define HTT_TX_SOUNDING_STATS_WIFI_VERSION_GET(_var) \
+    (((_var) & HTT_TX_SOUNDING_STATS_WIFI_VERSION_M) >> \
+     HTT_TX_SOUNDING_STATS_WIFI_VERSION_S)
+
+#define HTT_TX_SOUNDING_STATS_WIFI_VERSION_SET(_var, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_TX_SOUNDING_STATS_WIFI_VERSION, _val); \
+        ((_var) |= ((_val) << HTT_TX_SOUNDING_STATS_WIFI_VERSION_S)); \
+    } while (0)
+
 typedef struct {
     htt_tlv_hdr_t tlv_hdr;
     A_UINT32      tx_sounding_mode; /* HTT_TX_XX_SOUNDING_MODE */
@@ -9679,6 +9707,45 @@ typedef struct {
     A_UINT32 lookahead_sounding_ul_cnt;
     /** Total number of times lookahead sounding done for UL MU based on number of users */
     A_UINT32 lookahead_snd_ul_num_users[HTT_TX_PDEV_STATS_NUM_UL_MUMIMO_USER_STATS];
+    /** Total number of times CV query did not get triggered. */
+    A_UINT32 cv_query_not_triggered;
+    /** Total counters for various CV query completion status. */
+    A_UINT32 cv_query_status[HTT_TX_CV_QUERY_TOTAL_STATUS];
+
+    /** Total number of times sounding was disabled due to higher sounding duration */
+    A_UINT32 cv_query_txtime_based_snd_disable;
+    /** Histogram of sounding duration for SU feedback type. */
+    A_UINT32 sounding_histogram_su_fb[HTT_TX_SOUNDING_DUR_SU_FB_HISTOGRAM];
+    /** Histogram of sounding duration for MU feedback type. */
+    A_UINT32 sounding_histogram_mu_fb[HTT_TX_SOUNDING_DUR_MU_FB_HISTOGRAM];
+
+    /** Total number of times NRxNC sounding has happened from the BFER. */
+    A_UINT32 sounding_nr_nc[HTT_TX_SOUNDING_MAX_NR][HTT_TX_SOUNDING_MAX_NC];
+    /** Total number of times NR of the sounding downgraded due to sounding failures. */
+    A_UINT32 nr_downgrade_reason_sounding_failures;
+    /** Total number of times NR of the sounding downgraded due to excessive PER in SU. */
+    A_UINT32 nr_downgrade_reason_excessive_per_su;
+    /** Total number of times NR of the sounding downgraded due to excessive PER in MU. */
+    A_UINT32 nr_downgrade_reason_excessive_per_mu;
+    /** Total number of times mixed NR DL MU MIMO grouping happened with forced NR downgrade. */
+    A_UINT32 nr_downgrade_forced_dl_mu_mimo_grouping;
+    /**
+     * BIT [ 3 :  0]   :- wifi_version
+     * BIT [31 :  4]   :- reserved
+     */
+    union {
+        struct {
+            A_UINT32
+                     /* wifi_version:
+                      * Holds a HTT_RX_TX_PDEV_STATS_WIFI_VERSION value.
+                      * Refer to HTT_TX_SOUNDING_STATS_WIFI_VERSION_GET
+                      * / _SET macros for accessing this bitfield.
+                      */
+                     wifi_version:  4,
+                     reserved:     28;
+        };
+        A_UINT32 wifi_version__word;
+    };
 } htt_stats_tx_sounding_stats_tlv;
 /* preserve old name alias for new name consistent with the tag name */
 typedef htt_stats_tx_sounding_stats_tlv htt_tx_sounding_stats_tlv;
@@ -10115,6 +10182,19 @@ typedef struct {
 
 #define HTT_TX_TXBF_RATE_STATS_NUM_REDUCED_CHAN_TYPES 2/* 0: Half, 1: Quarter */
 
+#define HTT_TX_PDEV_RATE_TXBF_STATS_WIFI_VERSION_M 0x0000000f
+#define HTT_TX_PDEV_RATE_TXBF_STATS_WIFI_VERSION_S 0
+
+#define HTT_TX_PDEV_RATE_TXBF_STATS_WIFI_VERSION_GET(_var) \
+    (((_var) & HTT_TX_PDEV_RATE_TXBF_STATS_WIFI_VERSION_M) >> \
+     HTT_TX_PDEV_RATE_TXBF_STATS_WIFI_VERSION_S)
+
+#define HTT_TX_PDEV_RATE_TXBF_STATS_WIFI_VERSION_SET(_var, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_TX_PDEV_RATE_TXBF_STATS_WIFI_VERSION, _val); \
+        ((_var) |= ((_val) << HTT_TX_PDEV_RATE_TXBF_STATS_WIFI_VERSION_S)); \
+    } while (0)
+
 typedef struct {
     htt_tlv_hdr_t tlv_hdr;
     /** SU TxBF TX MCS stats */
@@ -10152,6 +10232,25 @@ typedef struct {
     A_UINT32 txbf_flag_not_set_disable_ul_dl_ofdma;
     A_UINT32 txbf_flag_not_set_mcs_threshold_value;
     A_UINT32 txbf_flag_not_set_final_status;
+    /* Stats for iMCS 1.1, 3.1, 4.1, 7.1 */
+    A_UINT32 tx_su_txbf_mcs_ext_3[HTT_TX_PDEV_STATS_NUM_EXTRA3_MCS_COUNTERS];
+    /**
+     * BIT [ 3 :  0]   :- wifi_version
+     * BIT [31 :  4]   :- reserved
+     */
+    union {
+        struct {
+            A_UINT32
+                     /* wifi_version:
+                      * Holds a HTT_RX_TX_PDEV_STATS_WIFI_VERSION value.
+                      * Refer to HTT_TX_PDEV_RATE_TXBF_STATS_WIFI_VERSION_GET
+                      * / _SET macros for accessing this bitfield.
+                      */
+                     wifi_version:  4,
+                     reserved:     28;
+        };
+        A_UINT32 wifi_version__word;
+    };
 } htt_stats_pdev_tx_rate_txbf_stats_tlv;
 /* preserve old name alias for new name consistent with the tag name */
 typedef htt_stats_pdev_tx_rate_txbf_stats_tlv htt_tx_pdev_txbf_rate_stats_tlv;
@@ -13088,9 +13187,9 @@ typedef struct {
     /* rx_pkt_cnt -
      * Received EOP (end-of-packet) count per packet type;
      * [0] = 11a; [1] = 11b; [2] = 11n; [3] = 11ac; [4] = 11ax;
-     * [5] = GF; [6] = EHT; [7] = WUR; [8] = AZ
+     * [5] = GF; [6] = EHT; [7] = WUR; [8] = AZ; [9] = UHR
      */
-    A_UINT32 rx_pkt_cnt[9];
+    A_UINT32 rx_pkt_cnt[10];
 } htt_stats_ani_pkt_cnt_tlv;
 
 typedef struct {
@@ -13098,9 +13197,9 @@ typedef struct {
     /* rx_pkt_crc_pass_cnt -
      * CRC pass count per packet type;
      * [0] = 11a; [1] = 11b; [2] = 11n; [3] = 11ac; [4] = 11ax;
-     * [5] = GF; [6] = EHT; [7] = WUR; [8] = AZ
+     * [5] = GF; [6] = EHT; [7] = WUR; [8] = AZ; [9] = UHR
      */
-    A_UINT32 rx_pkt_crc_pass_cnt[9];
+    A_UINT32 rx_pkt_crc_pass_cnt[10];
 } htt_stats_ani_crc_pass_tlv;
 
 typedef struct {
@@ -15495,6 +15594,12 @@ typedef struct {
     A_UINT32 abort_reason_comb_second_cmd[HTT_STATS_COMB_ABORT_SECOND_CMD_MAX];
     /** Percentage of window used by OBSS Rx */
     A_UINT32 obss_rx_airtime;
+    A_UINT32 mixed_sta_bw_dl_ofdma_txmode_cnt;
+    A_UINT32 dso_dl_ofdma_txmode_cnt;
+    A_UINT32 dso_pro_dl_ofdma_txmode_cnt;
+    A_UINT32 mixed_sta_bw_ul_ofdma_txmode_cnt;
+    A_UINT32 dso_ul_ofdma_txmode_cnt;
+    A_UINT32 dso_pro_ul_ofdma_txmode_cnt;
 } htt_stats_pdev_sched_algo_ofdma_stats_tlv;
 /* preserve old name alias for new name consistent with the tag name */
 typedef htt_stats_pdev_sched_algo_ofdma_stats_tlv
